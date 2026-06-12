@@ -1,130 +1,205 @@
+# UniswapV2 — Building an AMM from scratch
 
-# Uniswap V2 Protocol Specification
+Building a Uniswap V2–style AMM in Solidity + Foundry. This is a learning project — I'm working through the V2 architecture by implementing it from first principles, one contract at a time.
 
-This document serves as the comprehensive design and architectural plan for building a decentralized automated market maker (AMM) based on the Uniswap V2 core architecture.
+**Status:** Design done. Coding starts now.
 
 ---
 
-## 1. System Architecture Diagram
+## Build roadmap
+
+Built in phases. Each phase ships independently before moving to the next.
+
+- [x] **Phase 0 — ERC-20 tokens** (deployed to Sepolia)
+      Token A and Token B as the base pair.
+      → [Pandey456/ERC-20_Token](https://github.com/Pandey456/ERC-20_Token)
+- [ ] **Phase 1 — Pool contract** (current focus)
+      The actual AMM. One pool, two tokens. `addLiquidity`, `removeLiquidity`, `swap`.
+- [ ] **Phase 2 — Factory contract**
+      Deploys new Pools, prevents duplicates, maintains a registry of all pairs.
+- [ ] **Phase 3 — Router contract**
+      Multi-hop swaps and the user-convenience layer (slippage tolerance, deadlines, ratio matching).
+
+Not building all three at once on purpose. The Pool is the hard part; the Factory and Router are orchestration layers that only make sense once a working Pool exists.
+
+---
+
+## Architecture
+
+V2's three-contract design:
 
 ```
-                 +-------------------+
-                 |    User Wallet    |
-                 +---------+---------+
-                           |
-            1. Interact with Router Contract
-                           v
-                 +-------------------+
-                 |      Router       |
-                 +----+---------+----+
-                      |         |
-     2a. Add Liquidity|         | 2b. Query / Execute Swap
-    (If Pool missing) |         |     (Single or Multi-hop)
-                      v         v
-                 +----+---------+----+
-                 |      Factory      |
-                 +----+---------+----+
-                      |         |
-       3a. Create Pool|         | 3b. Fetch Pool Address
-                      v         v
-                 +----+---------+----+
-                 |    Pool (Pair)    |
-                 +-------------------+
-                 | - x * y = k       |
-                 | - Mint/Burn LP    |
-                 | - Swap Engine     |
-                 +-------------------+
+            User wallet
+                 |
+                 v
+        +-----------------+
+        |     Router      |   user-facing convenience layer
+        +--------+--------+
+                 |
+                 |  asks: "where's the pool for token0/token1?"
+                 v
+        +-----------------+
+        |     Factory     |   registry + deploys new Pools
+        +--------+--------+
+                 |
+                 |  returns pool address (or creates one)
+                 v
+        +-----------------+
+        |  Pool (the AMM) |   holds reserves, executes swaps,
+        |   x · y = k     |   mints/burns LP tokens
+        +-----------------+
+```
+
+Three contracts, three jobs:
+
+### Pool
+Where everything actually happens. Holds reserves of two tokens, enforces `x · y = k`, and mints LP tokens when liquidity is added (burns them on withdrawal). The Pool *is* the ERC-20 contract for its own LP token.
+
+Three functions:
+- `addLiquidity` — deposit both tokens, get LP tokens back
+- `removeLiquidity` — burn LP tokens, get a proportional slice of the reserves
+- `swap` — trade one token for the other
+
+### Factory
+Just a registry + deployer. Two responsibilities:
+- Deploy new Pool contracts (one per token pair) using `CREATE2` so addresses are deterministic from the token pair
+- Maintain `getPool[tokenA][tokenB] → poolAddress` so anyone can look up the canonical Pool
+
+The Factory doesn't handle liquidity or swaps directly — it's only consulted to find a pool or create one.
+
+### Router
+User-facing, stateless, holds no assets. Handles:
+- Single and multi-hop swaps (A → B → C across multiple pools)
+- Slippage protection and deadline checks
+- Calculating optimal deposit ratios so LPs don't accidentally donate to existing LPs
+- Looking up pool addresses via the Factory
+
+Multi-hop isn't anything fancy — the Router just calls `swap()` on multiple Pools in sequence, feeding the output of one into the next.
+
+---
+
+## The math
+
+The whole AMM has exactly four formulas. Everything else is bookkeeping.
+
+### Constant product invariant
+```
+x · y = k
+```
+- `x` = reserve of token0
+- `y` = reserve of token1
+- `k` = the product, which must never decrease (and grows slightly with each fee-bearing swap)
+
+### LP token minting
+
+**First liquidity provider** (pool is empty):
+```
+shares = sqrt(Δx · Δy)
+```
+Geometric mean of the two deposits. This is what makes per-share value scale linearly with pool size.
+
+**Subsequent liquidity providers:**
+```
+shares = min(
+    (Δx · totalSupply) / reserveX,
+    (Δy · totalSupply) / reserveY
+)
+```
+The `min(...)` matters. If you deposit off-ratio, the excess on the bigger side gets no share credit — it effectively donates to existing LPs. Forces honest ratio matching.
+
+### Swap output
+
+Without fee:
+```
+Δy = (y · Δx) / (x + Δx)
+```
+
+With 0.3% LP fee (V2 form, integer math):
+```
+Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)
+```
+
+The 0.3% fee stays in the pool. It grows `k`, which is how LPs earn from trading volume — silently, into the reserves.
+
+### Liquidity removal (proportional)
+```
+amount0 = (shares · reserve0) / totalSupply
+amount1 = (shares · reserve1) / totalSupply
+```
+Burn the user's LP shares, send them their proportional slice of each reserve. No price involved — just shares-to-reserves arithmetic.
+
+### Slippage protection
+
+Every swap takes a `minAmountOut` parameter. The function checks:
+```
+require(Δy >= minAmountOut)
+```
+If the executed output is less than what the user demanded — e.g., because of MEV / front-running between signing and execution — the whole transaction reverts. User pays gas but keeps their input tokens.
+
+---
+
+## Security considerations
+
+Attacks I'm thinking about and how I plan to handle each:
+
+| Attack | Defense |
+|---|---|
+| **Reentrancy** on swap and removeLiquidity | CEI pattern: checks → effects (state changes) → interactions (token transfers). All state updates happen before any external call. |
+| **First-LP inflation attack** | Plan: V2-style `MINIMUM_LIQUIDITY = 1000` permanently locked on first deposit. Final decision pending — see Open Questions. |
+| **Donation attacks** (raw token transfers to the pool) | V2 has `sync()` / `skim()` to reconcile. Likely deferred to a later phase. |
+| **Integer division precision** | Always multiply before dividing. `(a * b) / c` — never `(a / c) * b`. |
+| **Fee-on-transfer tokens** | Not supported in v1. Documented as a known limitation. |
+| **Slippage / sandwich attacks** | `minAmountOut` on every swap. |
+
+I'll run Slither on each phase before deploying anything to mainnet.
+
+---
+
+## Open questions
+
+Things I haven't fully decided yet — open for revisiting as I build:
+
+- **MINIMUM_LIQUIDITY lock** — implement in v1 (2 extra lines, blocks a real attack class), or skip for now and document?
+- **Fee model** — hard-code 0.3%, or configurable per pool? Leaning fixed for v1.
+- **Token ordering** — sort by address (V2-style) in the Factory, or accept whatever order the deployer passes? Probably accept for v1, sort starting from v2.
+- **LP token naming** — per-pair like V2's `UNI-V2`, or a single generic symbol?
+- **TWAP oracle** — out of scope for v1. Worth considering for v2.
+
+---
+
+## Local development
+
+```bash
+# Build
+forge build
+
+# Test (once tests exist)
+forge test
+
+# Static analysis
+slither .
+
+# Local fork
+anvil
 ```
 
 ---
 
-## 2. Core Contracts Architecture
+## Deployed contracts
 
-The protocol is split into three main contracts to maintain clear separation of concerns, optimize gas, and maximize security.
+**Phase 0 — ERC-20 tokens (Sepolia)**
 
-### 2.1 Router
-The **Router** is the primary peripheral contract. It serves as the main entry point for user interactions. It is stateless and does not hold ecosystem assets.
+| Asset | Address |
+|---|---|
+| Token A | [`0xf64c5955...50d6d1d`](https://sepolia.etherscan.io/address/0xf64c595579fde59a8a26c502bf492de9650d6d1d) |
+| Token B | [`0xa9d479f9...b35fb156`](https://sepolia.etherscan.io/address/0xa9d479f9685660b02a32b44c768aa6e1b35fb156) |
 
-* **Routing Decisions:** Dynamically evaluates inbound user calls to distinguish between liquidity management and asset swapping.
-* **Liquidity Management Delegation:** When a user triggers an asset provisioning workflow, the Router checks the registry and routes configuration parameters to the **Factory**.
-* **Swap Routing & Path Optimization:** When an asset exchange is requested, the Router queries the Factory registry to determine pool availability. It calculates whether the exchange can occur via a **Single Swap** (direct pair pool) or a **Multi-hop Swap** (routing through intermediary liquidity pools, e.g., Token A $\rightarrow$ Token B $\rightarrow$ Token C).
-
-### 2.2 Factory
-The **Factory** acts as the protocol registry and the deployment ledger for all initialized pair pools.
-
-* **Pool Existence Verification:** When receiving an asset provisioning request from the Router, it determines whether a dedicated contract for the requested pair already exists.
-* **Dynamic Pair Deployment:**
-    * If the pair pool **exists**, it forwards the liquidity provision instruction.
-    * If the pair pool **does not exist**, it programmatically deploys a new instance of the **Pool** contract using deterministic address generation (`CREATE2`) and registers the mapping directory within its global storage array.
-
-### 2.3 Pool (The Pair Contract)
-The **Pool** contract is the core execution environment. It acts as an ERC-20 token contract itself (representing Liquidity Provider ownership shares) and directly holds the reserves of the two underlying assets. It implements three primary functions:
-
-1.  `addLiquidity`
-2.  `swap`
-3.  `removeLiquidity`
+Phase 1+ — coming soon.
 
 ---
 
-## 3. Core Mathematical Mechanics & Formulae
+## Why this project
 
-### 3.1 Constant Product Invariant (`addLiquidity`)
-The liquidity pool operates on the constant product market maker formulation:
+I want to become a smart-contract / protocol engineer. Reading V2's source is hard until you've built one yourself, so I'm working through the architecture by implementing it from scratch. Building in public — find me on X: [@pandeyy456](https://x.com/pandeyy456).
 
-$$x \cdot y = k$$
-
-Where:
-* $x$ = Reserve balance of Token 0
-* $y$ = Reserve balance of Token 1
-* $k$ = The invariant value that must remain constant or increase during execution cycles.
-
-#### LP Token Minting Mechanics
-When liquidity is added, Liquidity Provider (LP) tokens are minted to track a user's relative ownership share of the underlying pool reserves. These tokens are standard ERC-20 assets with full `mint`, `burn`, and `transfer` functionality.
-
-* **Initial Bootstrapping (First Liquidity Event):**
-    To establish the initial pool exchange rate, the first deposit mints LP tokens equivalent to the geometric mean of the underlying deposit quantities:
-    $$\text{Qty}_{\text{LP}} = \sqrt{\Delta x \cdot \Delta y}$$
-
-* **Subsequent Liquidity Provisions:**
-    To preserve price parity and prevent dilution, subsequent minting operations scale linearly with the pool's existing total supply. The amount minted is bounded by the lesser relative share provided:
-    $$\text{Qty}_{\text{LP}} = \min\left( \frac{\Delta x \cdot \text{Total}_{\text{LP}}}{x}, \frac{\Delta y \cdot \text{Total}_{\text{LP}}}{y} \right)$$
-
----
-
-### 3.2 Automated Asset Swap (`swap`)
-The swap engine handles the single-sided deposition of one asset and calculates the precise maximum extractable volume of the counterpart asset.
-
-#### Execution Formula
-Based on the constant product rule ($x \cdot y = (x + \Delta x)(y - \Delta y)$), the fraction of assets transferred out to the recipient wallet ($\Delta y$) is determined dynamically by tracking the inbound delta ($\Delta x$):
-
-$$\Delta y = \frac{y \cdot \Delta x}{x + \Delta x}$$
-
-Where:
-* $\Delta x$ = The net inbound token quantity injected into the pool by the user (calculated as $\text{Gross Input} - \text{Protocol Fee}$).
-* $x$ = Current active pool reserve of the inbound asset.
-* $y$ = Current active pool reserve of the outbound asset.
-* $\Delta y$ = The total output token quantity to be transferred to the user's wallet.
-
-#### Slippage Protection Engine
-Due to concurrent state modifications on public ledgers, an execution threshold must be enforced to guard against high price impacts and frontrunning:
-* The transaction includes a strict user-defined variable: `minAmt`.
-* The execution engine asserts: $\Delta y \geq \text{minAmt}$.
-* If the calculated output amount ($\Delta y$) drops below `minAmt` due to adverse price slippage during block inclusion, the state modifications are rolled back and the transaction reverts.
-
----
-
-### 3.3 Liquidity Extraction (`removeLiquidity`)
-Any account holding LP tokens can redeem their ownership shares for their underlying fractional assets. Executing this call deposits the specified LP tokens back to the Pool contract to be burned.
-
-The quantities of Token 0 and Token 1 returned to the user are calculated proportionally using the following equations:
-
-$$\text{Amount}_0 = \frac{\text{Share}_{\text{LP}} \cdot x}{\text{Total}_{\text{LP}}}$$
-
-$$\text{Amount}_1 = \frac{\text{Share}_{\text{LP}} \cdot y}{\text{Total}_{\text{LP}}}$$
-
-Where:
-* $\text{Share}_{\text{LP}}$ = The quantity of LP tokens submitted by the user to be burned.
-* $\text{Total}_{\text{LP}}$ = The total outstanding circulating supply of the pool's LP tokens.
-* $x$ = Total reserve quantity of Token 0 currently held in the pool.
-* $y$ = Total reserve quantity of Token 1 currently held in the pool.
-* $\text{Amount}_0$ / $\text{Amount}_1$ = The exact quantities of the respective tokens transferred to the user's wallet.
+Loosely following the Cyfrin Updraft track but writing every contract myself instead of following tutorials. The point is the wrestling, not the typing.
