@@ -3,7 +3,7 @@
 Building a Uniswap V2–style AMM in Solidity + Foundry. This is a learning project — I'm working through the V2 architecture by implementing it from first principles, one contract at a time.
 
 ---
-**Status:** Design done. Coding starts now.
+**Status:** Phase 1 in progress. Pool + LP Token written; test suite ~50% done.
 
 ---
 
@@ -20,7 +20,7 @@ Built in phases. Each phase ships independently before moving to the next.
       Deploys new Pools, prevents duplicates, maintains a registry of all pairs.
 - [ ] **Phase 3 — Router contract**
       Multi-hop swaps and the user-convenience layer (slippage tolerance, deadlines, ratio matching).
-**Status:** Phase 1 in progress. Pool + LP Token written; test suite ~50% done.
+      
 Not building all three at once on purpose. The Pool is the hard part; the Factory and Router are orchestration layers that only make sense once a working Pool exists.
 
 ---
