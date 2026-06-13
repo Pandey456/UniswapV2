@@ -2,6 +2,7 @@
 
 Building a Uniswap V2–style AMM in Solidity + Foundry. This is a learning project — I'm working through the V2 architecture by implementing it from first principles, one contract at a time.
 
+---
 **Status:** Design done. Coding starts now.
 
 ---
