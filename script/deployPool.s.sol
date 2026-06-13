@@ -2,18 +2,14 @@
 pragma solidity ^0.8.13;
 
 import {Script} from "forge-std/Script.sol";
-import {Counter} from "../src/Counter.sol";
+import {pool} from "../src/pool.sol";
 
-contract CounterScript is Script {
-    Counter public counter;
-
-    function setUp() public {}
+contract deployPool is Script {
+    pool public Pool;
 
     function run() public {
         vm.startBroadcast();
-
-        counter = new Counter();
-
+        Pool = new pool(address(0), address(0));
         vm.stopBroadcast();
     }
 }
