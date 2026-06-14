@@ -63,6 +63,10 @@ contract pool {
 
         qtyToken0 += _qtyToken0;
         qtyToken1 += _qtyToken1;
+        bool firstLP;
+        if (lpToken.totalSupply() == 0) {
+            firstLp = true;
+        }
 
         //Interactions
         bool success1 = IERC20(token0).transferFrom(
@@ -76,6 +80,9 @@ contract pool {
             _qtyToken1
         );
         require(success1 && success2, "Transfer failed");
+        if (firstLp) {
+            lpToken.mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
+        }
         lpToken.mint(msg.sender, _LpTokenToMint);
     }
 
@@ -87,7 +94,7 @@ contract pool {
         if (lpToken.totalSupply() == 0) {
             uint256 mintLpQty = Math.sqrt(_qtyToken0 * _qtyToken1) -
                 MINIMUM_LIQUIDITY;
-            lpToken.mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
+
             return mintLpQty;
         } else {
             uint256 share0 = (_qtyToken0 * lpToken.totalSupply()) / qtyToken0;
