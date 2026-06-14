@@ -36,9 +36,15 @@ contract pool {
     address constant DEAD_ADDRESS = address(1);
     uint256 public qtyToken0; //X
     uint256 public qtyToken1; //Y
-    uint256 public product; //K
-    // address public immutable i_poolTokenAddress;
     LPToken public lpToken;
+
+    /* Events */
+    event Mint(
+        address indexed sender,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 lpshares
+    );
 
     /*constructor */
     constructor(address _token0, address _token1) {
@@ -56,17 +62,14 @@ contract pool {
         //Check
         require(_qtyToken0 > 0 && _qtyToken1 > 0, "Zero Amounts");
         //get the number of LP token to be minted
-        uint256 _LpTokenToMint = mintLpToken(_qtyToken0, _qtyToken1);
+        bool firstLp = (lpToken.totalSupply() == 0);
+        uint256 _LpTokenToMint = mintLpToken(_qtyToken0, _qtyToken1, firstLp);
         require(_LpTokenToMint > 0, "Insufficient Liquidity Minted");
 
         //Effect
 
         qtyToken0 += _qtyToken0;
         qtyToken1 += _qtyToken1;
-        bool firstLP;
-        if (lpToken.totalSupply() == 0) {
-            firstLp = true;
-        }
 
         //Interactions
         bool success1 = IERC20(token0).transferFrom(
@@ -84,14 +87,16 @@ contract pool {
             lpToken.mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
         }
         lpToken.mint(msg.sender, _LpTokenToMint);
+        emit Mint(msg.sender, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }
 
     /* To give the number of LP token to be minted */
     function mintLpToken(
         uint256 _qtyToken0,
-        uint256 _qtyToken1
-    ) private returns (uint256) {
-        if (lpToken.totalSupply() == 0) {
+        uint256 _qtyToken1,
+        bool firstLp
+    ) private view returns (uint256) {
+        if (firstLp) {
             uint256 mintLpQty = Math.sqrt(_qtyToken0 * _qtyToken1) -
                 MINIMUM_LIQUIDITY;
 
