@@ -102,8 +102,9 @@ contract pool {
 
             return mintLpQty;
         } else {
-            uint256 share0 = (_qtyToken0 * lpToken.totalSupply()) / qtyToken0;
-            uint256 share1 = (_qtyToken1 * lpToken.totalSupply()) / qtyToken1;
+            uint256 totalSupply = lpToken.totalSupply();
+            uint256 share0 = (_qtyToken0 * totalSupply) / qtyToken0;
+            uint256 share1 = (_qtyToken1 * totalSupply) / qtyToken1;
             uint256 mintLpQty = share0 > share1 ? share1 : share0;
             return mintLpQty;
         }
