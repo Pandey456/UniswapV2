@@ -45,6 +45,12 @@ contract pool {
         uint256 amount1,
         uint256 lpshares
     );
+    event Swap(
+        address indexed sender,
+        address indexed tokenIn,
+        uint256 amountIn,
+        uint256 amountOut
+    );
 
     /*constructor */
     constructor(address _token0, address _token1) {
@@ -121,6 +127,7 @@ contract pool {
         uint256 _minAmtOut
     ) public {
         //Checks
+        require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
         require(_tokenAmtIn > 0, "Can not be null");
         require(_tokenIn == token0 || _tokenIn == token1, "Invalid Token");
 
@@ -136,6 +143,7 @@ contract pool {
         //qtyToken0=x
         uint256 _tokenAmtOut = (outTokenAmt * _tokenAmtIn * 997) /
             (inTokenAmt * 1000 + _tokenAmtIn * 997);
+        require(_tokenAmtOut > 0, "Insufficient output");
 
         require(_tokenAmtOut >= _minAmtOut, "Slippage wiped");
         if (isToken0) {
@@ -161,5 +169,6 @@ contract pool {
             IERC20(_tokenOut).transfer(msg.sender, _tokenAmtOut),
             "Out Transfer Failed"
         );
+        emit Swap(msg.sender, _tokenIn, _tokenAmtIn, _tokenAmtOut);
     }
 }
