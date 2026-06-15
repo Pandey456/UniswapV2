@@ -83,9 +83,11 @@ contract pool {
             _qtyToken1
         );
         require(success1 && success2, "Transfer failed");
+
         if (firstLp) {
             lpToken.mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
         }
+
         lpToken.mint(msg.sender, _LpTokenToMint);
         emit Mint(msg.sender, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }
@@ -97,9 +99,11 @@ contract pool {
         bool firstLp
     ) private view returns (uint256) {
         if (firstLp) {
-            uint256 mintLpQty = Math.sqrt(_qtyToken0 * _qtyToken1) -
-                MINIMUM_LIQUIDITY;
-
+            uint256 sqrtValue = Math.sqrt(_qtyToken0 * _qtyToken1);
+            if (sqrtValue <= MINIMUM_LIQUIDITY) {
+                return 0;
+            }
+            uint256 mintLpQty = sqrtValue - MINIMUM_LIQUIDITY;
             return mintLpQty;
         } else {
             uint256 totalSupply = lpToken.totalSupply();
