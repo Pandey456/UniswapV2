@@ -113,4 +113,53 @@ contract pool {
             return mintLpQty;
         }
     }
+
+    /* Swap Function */
+    function swap(
+        uint256 _tokenAmtIn,
+        address _tokenIn,
+        uint256 _minAmtOut
+    ) public {
+        //Checks
+        require(_tokenAmtIn > 0, "Can not be null");
+        require(_tokenIn == token0 || _tokenIn == token1, "Invalid Token");
+
+        // Effect
+        bool isToken0 = (_tokenIn == token0);
+        address _tokenOut = isToken0 ? token1 : token0;
+        uint256 outTokenAmt = isToken0 ? qtyToken1 : qtyToken0; //Y
+        uint256 inTokenAmt = isToken0 ? qtyToken0 : qtyToken1; //X
+        // Δy = _tokenAmtOut
+        // Δx = _tokenAmtIn
+
+        /* fee = 0.3% --> Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)*/
+        //qtyToken0=x
+        uint256 _tokenAmtOut = (outTokenAmt * _tokenAmtIn * 997) /
+            (inTokenAmt * 1000 + _tokenAmtIn * 997);
+
+        require(_tokenAmtOut >= _minAmtOut, "Slippage wiped");
+        if (isToken0) {
+            qtyToken0 += _tokenAmtIn;
+            qtyToken1 -= _tokenAmtOut;
+        } else {
+            qtyToken1 += _tokenAmtIn;
+            qtyToken0 -= _tokenAmtOut;
+        }
+
+        // Interactions
+
+        //transfer
+        require(
+            IERC20(_tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                _tokenAmtIn
+            ),
+            "In Transfer Failed"
+        );
+        require(
+            IERC20(_tokenOut).transfer(msg.sender, _tokenAmtOut),
+            "Out Transfer Failed"
+        );
+    }
 }
