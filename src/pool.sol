@@ -51,6 +51,12 @@ contract pool {
         uint256 amountIn,
         uint256 amountOut
     );
+    event RemovedLiquidity(
+        address indexed sender,
+        uint256 lpTokenIn,
+        uint256 tokenOut0,
+        uint256 tokenOut1
+    );
 
     /*constructor */
     constructor(address _token0, address _token1) {
@@ -170,5 +176,32 @@ contract pool {
             "Out Transfer Failed"
         );
         emit Swap(msg.sender, _tokenIn, _tokenAmtIn, _tokenAmtOut);
+    }
+
+    /* Remove Liquidity */
+    function removeLiquidity(uint256 _lpTokenQty) public {
+        //Checks
+        require(_lpTokenQty > 0, "Zero LP Token");
+        require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
+        //Effects
+        //amount0 = (shares · reserve0) / totalSupply
+        uint256 totalLpSupply = lpToken.totalSupply();
+        uint256 amount0 = (_lpTokenQty * qtyToken0) / totalLpSupply;
+        uint256 amount1 = (_lpTokenQty * qtyToken1) / totalLpSupply;
+
+        qtyToken0 = qtyToken0 - amount0;
+        qtyToken1 = qtyToken1 - amount1;
+        //Interaction
+        lpToken.burn(msg.sender, _lpTokenQty);
+
+        require(
+            IERC20(token0).transfer(msg.sender, amount0),
+            "Token_0 Transfer Failed"
+        );
+        require(
+            IERC20(token1).transfer(msg.sender, amount1),
+            "Token_1 Transfer Failed"
+        );
+        emit RemovedLiquidity(msg.sender, _lpTokenQty, amount0, amount1);
     }
 }
