@@ -8,7 +8,7 @@ import {mockToken0} from "./mockToken0.sol";
 import {mockToken1} from "./mockToken1.sol";
 import {LPToken} from "../src/LPToken.sol";
 
-contract poolTest is Test {
+contract addLiquidity is Test {
     pool public Pool;
     LPToken public lpToken;
     deployPool public DeployPool;
