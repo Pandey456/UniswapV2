@@ -84,7 +84,7 @@ contract pool {
         qtyToken1 += _qtyToken1;
 
         //Interactions
-        emit Mint(msg.sender, _qtyToken0, _qtyToken1, _LpTokenToMint);
+
         bool success1 = IERC20(token0).transferFrom(
             msg.sender,
             address(this),
@@ -102,6 +102,7 @@ contract pool {
         }
 
         lpToken.mint(msg.sender, _LpTokenToMint);
+        emit Mint(msg.sender, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }
 
     /* To give the number of LP token to be minted */
@@ -163,7 +164,7 @@ contract pool {
         // Interactions
 
         //transfer
-        emit Swap(msg.sender, _tokenIn, _tokenAmtIn, _tokenAmtOut);
+
         require(
             IERC20(_tokenIn).transferFrom(
                 msg.sender,
@@ -176,6 +177,7 @@ contract pool {
             IERC20(_tokenOut).transfer(msg.sender, _tokenAmtOut),
             "Out Transfer Failed"
         );
+        emit Swap(msg.sender, _tokenIn, _tokenAmtIn, _tokenAmtOut);
     }
 
     /* Remove Liquidity */
@@ -188,11 +190,12 @@ contract pool {
         uint256 totalLpSupply = lpToken.totalSupply();
         uint256 amount0 = (_lpTokenQty * qtyToken0) / totalLpSupply;
         uint256 amount1 = (_lpTokenQty * qtyToken1) / totalLpSupply;
+        require(amount0 > 0 && amount1 > 0, "Insufficient Amounts");
 
         qtyToken0 = qtyToken0 - amount0;
         qtyToken1 = qtyToken1 - amount1;
         //Interaction
-        emit RemovedLiquidity(msg.sender, _lpTokenQty, amount0, amount1);
+
         lpToken.burn(msg.sender, _lpTokenQty);
 
         require(
@@ -203,5 +206,6 @@ contract pool {
             IERC20(token1).transfer(msg.sender, amount1),
             "Token_1 Transfer Failed"
         );
+        emit RemovedLiquidity(msg.sender, _lpTokenQty, amount0, amount1);
     }
 }
