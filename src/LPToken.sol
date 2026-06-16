@@ -4,12 +4,12 @@ pragma solidity ^0.8.18;
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract LPToken is ERC20 {
-    address public pool;
+    address public immutable pool;
 
     constructor(
-        string memory _name,
-        string memory _symbol
-    ) ERC20(_name, _symbol) {
+        string memory tokenName,
+        string memory tokenSymbol
+    ) ERC20(tokenName, tokenSymbol) {
         pool = msg.sender;
     }
 
