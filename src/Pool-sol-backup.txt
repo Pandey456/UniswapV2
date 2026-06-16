@@ -1,3 +1,4 @@
+
 // Layout of Contract:
 // version
 // imports
@@ -22,11 +23,12 @@
 pragma solidity ^0.8.18;
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {LPToken} from "./LPToken.sol";
+//import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract pool is ERC20, ReentrancyGuard {
+contract pool {
     /* State Variables */
     address public immutable token0;
     address public immutable token1;
@@ -36,6 +38,7 @@ contract pool is ERC20, ReentrancyGuard {
     address constant DEAD_ADDRESS = address(1);
     uint256 public qtyToken0; //X
     uint256 public qtyToken1; //Y
+    LPToken public immutable lpToken;
 
     /* Events */
     event Mint(
@@ -58,11 +61,13 @@ contract pool is ERC20, ReentrancyGuard {
     );
 
     /*constructor */
-    constructor(address _token0, address _token1) ERC20("LP_Token", "LPTKN") {
+    constructor(address _token0, address _token1) {
         require(_token0 != address(0) && _token1 != address(0), "Zero Address");
         require(_token0 != _token1, "Same Token");
         token0 = _token0;
         token1 = _token1;
+
+        lpToken = new LPToken("LP_Token", "LPTKN");
     }
 
     /* Functions*/
@@ -71,7 +76,7 @@ contract pool is ERC20, ReentrancyGuard {
         //Check
         require(_qtyToken0 > 0 && _qtyToken1 > 0, "Zero Amounts");
         //get the number of LP token to be minted
-        bool firstLp = (totalSupply() == 0);
+        bool firstLp = (lpToken.totalSupply() == 0);
         uint256 _LpTokenToMint = mintLpToken(_qtyToken0, _qtyToken1, firstLp);
         require(_LpTokenToMint > 0, "Insufficient Liquidity Minted");
 
@@ -95,10 +100,10 @@ contract pool is ERC20, ReentrancyGuard {
         require(success1 && success2, "Transfer failed");
 
         if (firstLp) {
-            _mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
+            lpToken.mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
         }
 
-        _mint(msg.sender, _LpTokenToMint);
+        lpToken.mint(msg.sender, _LpTokenToMint);
         emit Mint(msg.sender, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }
 
@@ -116,7 +121,7 @@ contract pool is ERC20, ReentrancyGuard {
             uint256 mintLpQty = sqrtValue - MINIMUM_LIQUIDITY;
             return mintLpQty;
         } else {
-            uint256 totalSupply = totalSupply();
+            uint256 totalSupply = lpToken.totalSupply();
             uint256 share0 = (_qtyToken0 * totalSupply) / qtyToken0;
             uint256 share1 = (_qtyToken1 * totalSupply) / qtyToken1;
             uint256 mintLpQty = share0 > share1 ? share1 : share0;
@@ -184,7 +189,7 @@ contract pool is ERC20, ReentrancyGuard {
         require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
         //Effects
         //amount0 = (shares · reserve0) / totalSupply
-        uint256 totalLpSupply = totalSupply();
+        uint256 totalLpSupply = lpToken.totalSupply();
         uint256 amount0 = (_lpTokenQty * qtyToken0) / totalLpSupply;
         uint256 amount1 = (_lpTokenQty * qtyToken1) / totalLpSupply;
         require(amount0 > 0 && amount1 > 0, "Insufficient Amounts");
@@ -193,7 +198,7 @@ contract pool is ERC20, ReentrancyGuard {
         qtyToken1 = qtyToken1 - amount1;
         //Interaction
 
-        _burn(msg.sender, _lpTokenQty);
+        lpToken.burn(msg.sender, _lpTokenQty);
 
         require(
             IERC20(token0).transfer(msg.sender, amount0),
