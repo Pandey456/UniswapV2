@@ -6,11 +6,9 @@ import {deployPool} from "../script/deployPool.s.sol";
 import {pool} from "../src/pool.sol";
 import {mockToken0} from "./mockToken0.sol";
 import {mockToken1} from "./mockToken1.sol";
-import {LPToken} from "../src/LPToken.sol";
 
 contract addLiquidity is Test {
     pool public Pool;
-    LPToken public lpToken;
     deployPool public DeployPool;
     mockToken0 public MockToken0;
     mockToken1 public MockToken1;
@@ -40,36 +38,24 @@ contract addLiquidity is Test {
     }
 
     function testLpTokenCreated() public view {
-        address lpTokenAddress = address(Pool.lpToken());
+        address lpTokenAddress = address(Pool);
         assertNotEq(lpTokenAddress, address(0));
     }
 
     function testLPTokenMint() public {
-        lpToken = new LPToken("LPTOken", "LPT");
-        lpToken.mint(USER, 100);
-        assertEq(lpToken.balanceOf(USER), 100);
+        MockToken0.approve(address(Pool), 10000);
+        MockToken1.approve(address(Pool), 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
+
+        assertEq(Pool.balanceOf(address(this)), 9000);
     }
 
     function testLPTokenBurn() public {
-        lpToken = new LPToken("LPTOken", "LPT");
-        lpToken.mint(USER, 100);
-        lpToken.burn(USER, 50);
-        assertEq(lpToken.balanceOf(USER), 50);
-    }
+        MockToken0.approve(address(Pool), 10000);
+        MockToken1.approve(address(Pool), 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
 
-    function testLpOnlyTokenMintRevert() public {
-        lpToken = new LPToken("LPTOken", "LPT");
-        vm.prank(USER);
-        vm.expectRevert("Only Pool Can Perform this action");
-        lpToken.mint(USER, 100);
-    }
-
-    function testLPTokenBurnRevert() public {
-        lpToken = new LPToken("LPTOken", "LPT");
-        lpToken.mint(USER, 100);
-        vm.expectRevert("Only Pool Can Perform this action");
-        vm.prank(USER);
-        lpToken.burn(USER, 50);
+        assertEq(Pool.balanceOf(address(1)), 1000);
     }
 
     function testNullTokenPool() public {
@@ -86,19 +72,19 @@ contract addLiquidity is Test {
 
     function testAddLiquidity() public {
         vm.expectRevert("Zero Amounts");
-        Pool.addLiquidity(0, 0);
+        Pool.addLiquidity(0, 0, address(this));
     }
 
     function testNoTokenMint() public {
         vm.expectRevert("Insufficient Liquidity Minted");
-        Pool.addLiquidity(10, 10);
+        Pool.addLiquidity(10, 10, address(this));
     }
 
     function testQuantityIsGettingUpdatedtkn0() public {
         uint256 initialQty = Pool.qtyToken0();
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
         uint256 finalQty = Pool.qtyToken0();
         assertNotEq(initialQty, finalQty);
     }
@@ -107,7 +93,7 @@ contract addLiquidity is Test {
         uint256 initialQty = Pool.qtyToken1();
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
         uint256 finalQty = Pool.qtyToken1();
         assertNotEq(initialQty, finalQty);
     }
@@ -130,14 +116,14 @@ contract addLiquidity is Test {
 
         emit Mint(address(this), token0Qty, token1Qty, expectedLpTokens);
         // in above line we are saying foundry what value and structure of emit to expect
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
     }
 
     function testToken0TransferToPool() public {
         //uint256 initialtoken0 = MockToken0.balanceOf(address(Pool));
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
         uint256 finaltoken0 = MockToken0.balanceOf(address(Pool));
         assertEq(finaltoken0, 10000);
     }
@@ -146,21 +132,20 @@ contract addLiquidity is Test {
         //uint256 initialtoken0 = MockToken0.balanceOf(address(Pool));
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
         uint256 finaltoken1 = MockToken1.balanceOf(address(Pool));
         assertEq(finaltoken1, 10000);
     }
 
     function testLPTokenIsBurned() public {
-        LPToken realLpToken = LPToken(Pool.lpToken());
-        uint256 initialtotalLp = realLpToken.totalSupply();
+        uint256 initialtotalLp = Pool.totalSupply();
 
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
 
-        uint256 lpAtAdd0 = realLpToken.balanceOf(address(1));
-        uint256 userLpTkn = realLpToken.balanceOf(address(this));
+        uint256 lpAtAdd0 = Pool.balanceOf(address(1));
+        uint256 userLpTkn = Pool.balanceOf(address(this));
 
         assertEq(initialtotalLp, 0);
         assertEq(lpAtAdd0, 1000);
@@ -171,24 +156,23 @@ contract addLiquidity is Test {
         //uint256 initialtoken0 = MockToken0.balanceOf(address(Pool));
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
         MockToken0.approve(address(Pool), 500);
         MockToken1.approve(address(Pool), 500);
-        Pool.addLiquidity(500, 500);
+        Pool.addLiquidity(500, 500, address(this));
         uint256 finaltoken0 = MockToken0.balanceOf(address(Pool));
         assertEq(finaltoken0, 10500);
     }
 
     function testLpTokenIsGenerated2ndTime() public {
-        LPToken realLpToken = LPToken(Pool.lpToken());
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
         // upto here the User must hold 9000 LP token
         MockToken0.approve(address(Pool), 5000); //x>y:x?y --> True condition
         MockToken1.approve(address(Pool), 2000);
-        Pool.addLiquidity(5000, 2000);
-        uint256 userLpTkn = realLpToken.balanceOf(address(this));
+        Pool.addLiquidity(5000, 2000, address(this));
+        uint256 userLpTkn = Pool.balanceOf(address(this));
         assertGt(userLpTkn, 9000); // Checks if userLpTkn > 9000
     }
 
@@ -199,20 +183,20 @@ contract addLiquidity is Test {
         MockToken1.approve(address(Pool1), 500);
 
         vm.expectRevert();
-        Pool1.addLiquidity(10000, 10000);
+        Pool1.addLiquidity(10000, 10000, address(this));
     }
 
     function testCheckFalseConditionOfTernary() public {
         //x>y:x?y --> false condition
-        LPToken realLpToken = LPToken(Pool.lpToken());
+
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000);
+        Pool.addLiquidity(10000, 10000, address(this));
         // upto here the User must hold 9000 LP token
         MockToken0.approve(address(Pool), 2000);
         MockToken1.approve(address(Pool), 2000);
-        Pool.addLiquidity(2000, 2000);
-        uint256 userLpTkn = realLpToken.balanceOf(address(this));
+        Pool.addLiquidity(2000, 2000, address(this));
+        uint256 userLpTkn = Pool.balanceOf(address(this));
         assertGt(userLpTkn, 9000); // Checks if userLpTkn > 9000
     }
 }

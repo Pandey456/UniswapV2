@@ -67,7 +67,11 @@ contract pool is ERC20, ReentrancyGuard {
 
     /* Functions*/
 
-    function addLiquidity(uint256 _qtyToken0, uint256 _qtyToken1) public {
+    function addLiquidity(
+        uint256 _qtyToken0,
+        uint256 _qtyToken1,
+        address _user
+    ) public {
         //Check
         require(_qtyToken0 > 0 && _qtyToken1 > 0, "Zero Amounts");
         //get the number of LP token to be minted
@@ -83,12 +87,12 @@ contract pool is ERC20, ReentrancyGuard {
         //Interactions
 
         bool success1 = IERC20(token0).transferFrom(
-            msg.sender,
+            _user,
             address(this),
             _qtyToken0
         );
         bool success2 = IERC20(token1).transferFrom(
-            msg.sender,
+            _user,
             address(this),
             _qtyToken1
         );
@@ -98,8 +102,8 @@ contract pool is ERC20, ReentrancyGuard {
             _mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
         }
 
-        _mint(msg.sender, _LpTokenToMint);
-        emit Mint(msg.sender, _qtyToken0, _qtyToken1, _LpTokenToMint);
+        _mint(_user, _LpTokenToMint);
+        emit Mint(_user, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }
 
     /* To give the number of LP token to be minted */
@@ -128,7 +132,8 @@ contract pool is ERC20, ReentrancyGuard {
     function swap(
         uint256 _tokenAmtIn,
         address _tokenIn,
-        uint256 _minAmtOut
+        uint256 _minAmtOut,
+        address _user
     ) public {
         //Checks
         require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
@@ -163,46 +168,42 @@ contract pool is ERC20, ReentrancyGuard {
         //transfer
 
         require(
-            IERC20(_tokenIn).transferFrom(
-                msg.sender,
-                address(this),
-                _tokenAmtIn
-            ),
+            IERC20(_tokenIn).transferFrom(_user, address(this), _tokenAmtIn),
             "In Transfer Failed"
         );
         require(
-            IERC20(_tokenOut).transfer(msg.sender, _tokenAmtOut),
+            IERC20(_tokenOut).transfer(_user, _tokenAmtOut),
             "Out Transfer Failed"
         );
-        emit Swap(msg.sender, _tokenIn, _tokenAmtIn, _tokenAmtOut);
+        emit Swap(_user, _tokenIn, _tokenAmtIn, _tokenAmtOut);
     }
 
     /* Remove Liquidity */
-    function removeLiquidity(uint256 _lpTokenQty) public {
-        //Checks
-        require(_lpTokenQty > 0, "Zero LP Token");
-        require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
-        //Effects
-        //amount0 = (shares · reserve0) / totalSupply
-        uint256 totalLpSupply = totalSupply();
-        uint256 amount0 = (_lpTokenQty * qtyToken0) / totalLpSupply;
-        uint256 amount1 = (_lpTokenQty * qtyToken1) / totalLpSupply;
-        require(amount0 > 0 && amount1 > 0, "Insufficient Amounts");
+    // function removeLiquidity(uint256 _lpTokenQty, address _user) public {
+    //     //Checks
+    //     require(_lpTokenQty > 0, "Zero LP Token");
+    //     require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
+    //     //Effects
+    //     //amount0 = (shares · reserve0) / totalSupply
+    //     uint256 totalLpSupply = totalSupply();
+    //     uint256 amount0 = (_lpTokenQty * qtyToken0) / totalLpSupply;
+    //     uint256 amount1 = (_lpTokenQty * qtyToken1) / totalLpSupply;
+    //     require(amount0 > 0 && amount1 > 0, "Insufficient Amounts");
 
-        qtyToken0 = qtyToken0 - amount0;
-        qtyToken1 = qtyToken1 - amount1;
-        //Interaction
+    //     qtyToken0 = qtyToken0 - amount0;
+    //     qtyToken1 = qtyToken1 - amount1;
+    //     //Interaction
 
-        _burn(msg.sender, _lpTokenQty);
+    //     _burn(_user, _lpTokenQty);
 
-        require(
-            IERC20(token0).transfer(msg.sender, amount0),
-            "Token_0 Transfer Failed"
-        );
-        require(
-            IERC20(token1).transfer(msg.sender, amount1),
-            "Token_1 Transfer Failed"
-        );
-        emit RemovedLiquidity(msg.sender, _lpTokenQty, amount0, amount1);
-    }
+    //     require(
+    //         IERC20(token0).transfer(_user, amount0),
+    //         "Token_0 Transfer Failed"
+    //     );
+    //     require(
+    //         IERC20(token1).transfer(_user, amount1),
+    //         "Token_1 Transfer Failed"
+    //     );
+    //     emit RemovedLiquidity(_user, _lpTokenQty, amount0, amount1);
+    // }
 }
