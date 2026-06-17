@@ -67,7 +67,7 @@ contract pool is ERC20, ReentrancyGuard {
 
     /* Functions*/
 
-    function addLiquidity(uint256 _qtyToken0, uint256 _qtyToken1) public {
+    function addLiquidity(uint256 _qtyToken0, uint256 _qtyToken1) public nonReentrant {
         //Check
         require(_qtyToken0 > 0 && _qtyToken1 > 0, "Zero Amounts");
         //get the number of LP token to be minted
@@ -129,7 +129,7 @@ contract pool is ERC20, ReentrancyGuard {
         uint256 _tokenAmtIn,
         address _tokenIn,
         uint256 _minAmtOut
-    ) public {
+    ) public nonReentrant {
         //Checks
         require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
         require(_tokenAmtIn > 0, "Can not be null");
@@ -178,7 +178,7 @@ contract pool is ERC20, ReentrancyGuard {
     }
 
     /* Remove Liquidity */
-    function removeLiquidity(uint256 _lpTokenQty) public {
+    function removeLiquidity(uint256 _lpTokenQty) public nonReentrant {
         //Checks
         require(_lpTokenQty > 0, "Zero LP Token");
         require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
