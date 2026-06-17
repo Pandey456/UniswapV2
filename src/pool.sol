@@ -116,9 +116,9 @@ contract pool is ERC20, ReentrancyGuard {
             uint256 mintLpQty = sqrtValue - MINIMUM_LIQUIDITY;
             return mintLpQty;
         } else {
-            uint256 totalSupply = totalSupply();
-            uint256 share0 = (_qtyToken0 * totalSupply) / qtyToken0;
-            uint256 share1 = (_qtyToken1 * totalSupply) / qtyToken1;
+            uint256 total_Supply = totalSupply();
+            uint256 share0 = (_qtyToken0 * total_Supply) / qtyToken0;
+            uint256 share1 = (_qtyToken1 * total_Supply) / qtyToken1;
             uint256 mintLpQty = share0 > share1 ? share1 : share0;
             return mintLpQty;
         }
