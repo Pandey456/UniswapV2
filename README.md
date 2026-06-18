@@ -3,7 +3,7 @@
 Building a Uniswap V2–style AMM in Solidity + Foundry. This is a learning project — I'm working through the V2 architecture by implementing it from first principles, one contract at a time.
 
 ---
-**Status:** Phase 1 in progress. Pool + LP Token written; test suite ~50% done.
+**Status:** Phase 2 in progress. Pool + Test Completed.
 
 ---
 
@@ -14,7 +14,7 @@ Built in phases. Each phase ships independently before moving to the next.
 - [x] **Phase 0 — ERC-20 tokens** (deployed to Sepolia)
       Token A and Token B as the base pair.
       → [Pandey456/ERC-20_Token](https://github.com/Pandey456/ERC-20_Token)
-- [ ] **Phase 1 — Pool contract** (current focus)
+- [X] **Phase 1 — Pool contract** (current focus)
       The actual AMM. One pool, two tokens. `addLiquidity`, `removeLiquidity`, `swap`.
 - [ ] **Phase 2 — Factory contract**
       Deploys new Pools, prevents duplicates, maintains a registry of all pairs.
