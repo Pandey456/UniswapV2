@@ -201,7 +201,7 @@ contract pool is ERC20, ReentrancyGuard {
         qtyToken1 = qtyToken1 - amount1;
         //Interaction
 
-        _burn(_user, _lpTokenQty);
+        _burn(msg.sender, _lpTokenQty);
 
         require(
             IERC20(token0).transfer(_user, amount0),
