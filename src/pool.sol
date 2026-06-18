@@ -132,7 +132,8 @@ contract pool is ERC20, ReentrancyGuard {
     function swap(
         uint256 _tokenAmtIn,
         address _tokenIn,
-        uint256 _minAmtOut
+        uint256 _minAmtOut,
+        address _user
     ) public nonReentrant {
         //Checks
         require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");

@@ -6,8 +6,9 @@ import {deployPool} from "../script/deployPool.s.sol";
 import {pool} from "../src/pool.sol";
 import {mockToken0} from "./mockToken0.sol";
 import {mockToken1} from "./mockToken1.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract addLiquidity is Test {
+contract swap is Test {
     pool public Pool;
 
     deployPool public DeployPool;
@@ -86,5 +87,19 @@ contract addLiquidity is Test {
         vm.expectEmit(true, true, false, true);
         emit Swap(address(this), address(MockToken0), inT, outT);
         Pool.swap(1000, address(MockToken0), 900, address(this));
+    }
+
+    function testTransferFailedForToken1() public {
+        MockToken0.approve(address(Pool), 10000);
+
+        bytes memory selectorOnly = abi.encodeWithSignature(
+            "transfer(address,uint256)"
+        );
+        vm.mockCall(address(MockToken1), selectorOnly, abi.encode(false));
+
+        vm.expectRevert("Out Transfer Failed");
+        Pool.swap(1000, address(MockToken0), 900, address(this));
+
+        vm.clearMockedCalls();
     }
 }
