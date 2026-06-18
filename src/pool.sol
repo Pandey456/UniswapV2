@@ -71,7 +71,7 @@ contract pool is ERC20, ReentrancyGuard {
         uint256 _qtyToken0,
         uint256 _qtyToken1,
         address _user
-    ) public {
+    ) public nonReentrant {
         //Check
         require(_qtyToken0 > 0 && _qtyToken1 > 0, "Zero Amounts");
         //get the number of LP token to be minted
@@ -85,24 +85,24 @@ contract pool is ERC20, ReentrancyGuard {
         qtyToken1 += _qtyToken1;
 
         //Interactions
-
-        bool success1 = IERC20(token0).transferFrom(
-            _user,
-            address(this),
-            _qtyToken0
-        );
-        bool success2 = IERC20(token1).transferFrom(
-            _user,
-            address(this),
-            _qtyToken1
-        );
-        require(success1 && success2, "Transfer failed");
-
         if (firstLp) {
             _mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
         }
 
         _mint(_user, _LpTokenToMint);
+
+        bool success1 = IERC20(token0).transferFrom(
+            msg.sender,
+            address(this),
+            _qtyToken0
+        );
+        bool success2 = IERC20(token1).transferFrom(
+            msg.sender,
+            address(this),
+            _qtyToken1
+        );
+        require(success1 && success2, "Transfer failed");
+
         emit Mint(_user, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }
 
@@ -168,7 +168,11 @@ contract pool is ERC20, ReentrancyGuard {
         //transfer
 
         require(
-            IERC20(_tokenIn).transferFrom(_user, address(this), _tokenAmtIn),
+            IERC20(_tokenIn).transferFrom(
+                msg.sender,
+                address(this),
+                _tokenAmtIn
+            ),
             "In Transfer Failed"
         );
         require(
@@ -179,7 +183,10 @@ contract pool is ERC20, ReentrancyGuard {
     }
 
     /* Remove Liquidity */
-    function removeLiquidity(uint256 _lpTokenQty, address _user) public {
+    function removeLiquidity(
+        uint256 _lpTokenQty,
+        address _user
+    ) public nonReentrant {
         //Checks
         require(_lpTokenQty > 0, "Zero LP Token");
         require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
