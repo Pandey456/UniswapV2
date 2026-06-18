@@ -84,13 +84,12 @@ contract pool is ERC20, ReentrancyGuard {
         qtyToken0 += _qtyToken0;
         qtyToken1 += _qtyToken1;
 
-        //Interactions
         if (firstLp) {
             _mint(DEAD_ADDRESS, MINIMUM_LIQUIDITY); //burn but tokens are still counted for supply
         }
 
         _mint(_user, _LpTokenToMint);
-
+        //Interactions
         bool success1 = IERC20(token0).transferFrom(
             msg.sender,
             address(this),
