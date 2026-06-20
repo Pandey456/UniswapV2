@@ -1,4 +1,4 @@
-//SDPX-License-Identifier:MIT
+//SPDX-License-Identifier:MIT
 pragma solidity ^0.8.18;
 import {pool} from "./pool.sol";
 
@@ -7,24 +7,17 @@ contract factory {
 
     address[] public allPool;
     address public immutable i_ROUTER;
-
-    constructor() {
-        i_ROUTER = msg.sender;
-    }
-
-    modifier onlyRouter() {
-        _onlyRouter();
-        _;
-    }
-
-    function _onlyRouter() internal view {
-        require(msg.sender == i_ROUTER, "only Router can perform");
-    }
+    event PoolCreated(
+        address indexed token0,
+        address indexed token1,
+        address poolAddress,
+        uint256 poolCount
+    );
 
     function createPool(
         address _tokenA,
         address _tokenB
-    ) external onlyRouter returns (address) {
+    ) external returns (address) {
         //checks
         require(_tokenA != _tokenB, "Same Token");
         (address token0, address token1) = _tokenA < _tokenB
@@ -42,10 +35,11 @@ contract factory {
         poolRegistry[token0][token1] = newPool;
         poolRegistry[token1][token0] = newPool;
         allPool.push(newPool);
+        emit PoolCreated(token0, token1, newPool, allPool.length);
         return newPool;
     }
 
-    function getAllPool() external view returns (address[] memory) {
-        return allPool;
+    function getPoolLength() external view returns (uint256) {
+        return allPool.length;
     }
 }

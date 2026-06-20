@@ -7,6 +7,7 @@ import {factory} from "../src/factory.sol";
 import {mockToken0} from "./mockToken0.sol";
 import {mockToken1} from "./mockToken1.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {pool} from "../src/pool.sol";
 
 contract factoryTest is Test {
     factory public Factory;
@@ -15,6 +16,12 @@ contract factoryTest is Test {
     mockToken0 public MockToken0;
     mockToken1 public MockToken1;
     address public USER;
+    event PoolCreated(
+        address indexed token0,
+        address indexed token1,
+        address poolAddress,
+        uint256 poolCount
+    );
 
     function setUp() public {
         //Factory = new factory();
@@ -28,17 +35,7 @@ contract factoryTest is Test {
         Factory = DeployFactory.Factory();
     }
 
-    function testIfPoolDeployedNonROuter() public {
-        vm.prank(USER);
-        vm.expectRevert("only Router can perform");
-        address newPool = Factory.createPool(
-            address(MockToken0),
-            address(MockToken1)
-        );
-    }
-
     function testIfPoolDeployed() public {
-        vm.prank(Factory.i_ROUTER());
         address newPool = Factory.createPool(
             address(MockToken0),
             address(MockToken1)
@@ -47,7 +44,6 @@ contract factoryTest is Test {
     }
 
     function testSameToken() public {
-        vm.prank(Factory.i_ROUTER());
         vm.expectRevert("Same Token");
         address newPool = Factory.createPool(
             address(MockToken0),
@@ -56,34 +52,28 @@ contract factoryTest is Test {
     }
 
     function testSortingAndZeroAddr() public {
-        vm.prank(Factory.i_ROUTER());
         vm.expectRevert("Zero Address");
         address newPool = Factory.createPool(address(1), address(0));
     }
 
     function testPoolExist() public {
-        vm.prank(Factory.i_ROUTER());
         Factory.createPool(address(MockToken1), address(MockToken0));
-        vm.prank(Factory.i_ROUTER());
         vm.expectRevert("Pool Already Exists");
         Factory.createPool(address(MockToken1), address(MockToken0));
     }
 
     function testPoolExistReverse() public {
-        vm.prank(Factory.i_ROUTER());
         Factory.createPool(address(MockToken0), address(MockToken1));
-        vm.prank(Factory.i_ROUTER());
         vm.expectRevert("Pool Already Exists");
         Factory.createPool(address(MockToken1), address(MockToken0));
     }
 
-    function testGetAllPoolReturnsEmptyArrayInitially() public {
-        address[] memory pools = Factory.getAllPool();
-        assertEq(pools.length, 0);
+    function testGetAllPoollengthZero() public {
+        uint256 length = Factory.getPoolLength();
+        assertEq(length, 0);
     }
 
     function testForMapping() public {
-        vm.prank(Factory.i_ROUTER());
         address actualPool = Factory.createPool(
             address(MockToken0),
             address(MockToken1)
@@ -96,7 +86,6 @@ contract factoryTest is Test {
     }
 
     function testForMappingReverse() public {
-        vm.prank(Factory.i_ROUTER());
         address actualPool = Factory.createPool(
             address(MockToken0),
             address(MockToken1)
@@ -109,13 +98,39 @@ contract factoryTest is Test {
     }
 
     function testGetAllPoolReturns() public {
-        vm.prank(Factory.i_ROUTER());
         address poolAddress = Factory.createPool(
             address(MockToken0),
             address(MockToken1)
         );
-        address[] memory pools = Factory.getAllPool();
-        address expectedPool = pools[0];
-        assertEq(poolAddress, expectedPool);
+        uint256 length = Factory.getPoolLength();
+
+        assertNotEq(length, 0);
+    }
+
+    function testEmitEvent() public {
+        (address token0, address token1) = address(MockToken0) <
+            address(MockToken1)
+            ? (address(MockToken0), address(MockToken1))
+            : (address(MockToken1), address(MockToken0));
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
+
+        bytes32 bytecodeHash = keccak256(
+            abi.encodePacked(
+                type(pool).creationCode,
+                abi.encode(token0, token1)
+            )
+        );
+
+        address expectedPoolAddress = vm.computeCreate2Address(
+            salt,
+            bytecodeHash,
+            address(Factory)
+        );
+
+        vm.expectEmit(true, true, false, true);
+
+        emit PoolCreated(token0, token1, expectedPoolAddress, 1);
+
+        Factory.createPool(address(MockToken0), address(MockToken1));
     }
 }
