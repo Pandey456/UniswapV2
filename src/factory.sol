@@ -29,8 +29,10 @@ contract factory {
         );
 
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-        pool Pool = new pool{salt: salt}(token0, token1);
+        //pool Pool = new pool{salt: salt}(token0, token1);
+
         address newPool = address(Pool);
+
         poolRegistry[token0][token1] = newPool;
         poolRegistry[token1][token0] = newPool;
         allPool.push(newPool);
