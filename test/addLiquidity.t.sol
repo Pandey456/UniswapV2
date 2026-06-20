@@ -25,11 +25,14 @@ contract addLiquidity is Test {
         MockToken0 = new mockToken0("MockTKN1", "MTKN_1", 1000000);
         MockToken1 = new mockToken1("MockTKN2", "MTKN_2", 500000);
         DeployPool = new deployPool();
-        DeployPool.run(address(MockToken0), address(MockToken1));
+        DeployPool.run();
         USER = makeAddr("USER");
 
         //the the hidden getter function for ' pool public Pool;'
         Pool = DeployPool.Pool();
+        address owner = Pool.i_FactoryAdddress();
+        vm.prank(owner);
+        Pool.initizalized(address(MockToken0), address(MockToken1));
     }
 
     function testCretePool() public view {
@@ -59,15 +62,20 @@ contract addLiquidity is Test {
     }
 
     function testNullTokenPool() public {
+        //vm.expectRevert("Zero Address");
+        pool Pool1 = new pool();
+        address owner = Pool1.i_FactoryAdddress();
+        vm.prank(owner);
         vm.expectRevert("Zero Address");
-        //pool Pool1 = new pool(address(MockToken1), address(0));
-        new pool(address(MockToken1), address(0));
+        Pool1.initizalized(address(MockToken1), address(0));
     }
 
     function testSameToken() public {
+        pool Pool1 = new pool();
+        address owner = Pool1.i_FactoryAdddress();
+        vm.prank(owner);
         vm.expectRevert("Same Token");
-        //pool Pool1 = new pool(address(MockToken1), address(MockToken1));
-        new pool(address(MockToken1), address(MockToken1));
+        Pool1.initizalized(address(MockToken1), address(MockToken1));
     }
 
     function testAddLiquidity() public {
@@ -178,7 +186,10 @@ contract addLiquidity is Test {
 
     function testRevertsWhenNotTransferred() public {
         mockToken0 NewToken = new mockToken0("MockTKN1", "MTKN_1", 1000);
-        pool Pool1 = new pool(address(NewToken), address(MockToken1));
+        pool Pool1 = new pool();
+        address owner = Pool1.i_FactoryAdddress();
+        vm.prank(owner);
+        Pool1.initizalized(address(NewToken), address(MockToken1));
         NewToken.approve(address(Pool1), 500);
         MockToken1.approve(address(Pool1), 500);
 
@@ -198,5 +209,34 @@ contract addLiquidity is Test {
         Pool.addLiquidity(2000, 2000, address(this));
         uint256 userLpTkn = Pool.balanceOf(address(this));
         assertGt(userLpTkn, 9000); // Checks if userLpTkn > 9000
+    }
+
+    function testOnlyOwner() public {
+        address mockFactory = address(0x123);
+        pool Pool1 = new pool();
+        vm.prank(mockFactory);
+        vm.expectRevert("Not a Owner");
+        Pool1.initizalized(address(MockToken1), address(MockToken0));
+    }
+
+    function testAlreadyInitialized() public {
+        pool Pool1 = new pool();
+        Pool1.initizalized(address(MockToken1), address(MockToken0));
+        vm.expectRevert("Already initizalized");
+        Pool1.initizalized(address(MockToken0), address(MockToken1));
+    }
+
+    function testInitializedZeroAddress() public {
+        pool Pool1 = new pool();
+
+        vm.expectRevert("Zero Address");
+        Pool1.initizalized(address(0), address(MockToken1));
+    }
+
+    function testInitializedSameAddress() public {
+        pool Pool1 = new pool();
+
+        vm.expectRevert("Same Token");
+        Pool1.initizalized(address(MockToken1), address(MockToken1));
     }
 }

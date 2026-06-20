@@ -7,9 +7,9 @@ import {pool} from "../src/pool.sol";
 contract deployPool is Script {
     pool public Pool;
 
-    function run(address _token0, address _token1) public {
+    function run() public {
         vm.startBroadcast();
-        Pool = new pool(_token0, _token1);
+        Pool = new pool();
         vm.stopBroadcast();
     }
 }

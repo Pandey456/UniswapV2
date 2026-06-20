@@ -115,10 +115,7 @@ contract factoryTest is Test {
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
 
         bytes32 bytecodeHash = keccak256(
-            abi.encodePacked(
-                type(pool).creationCode,
-                abi.encode(token0, token1)
-            )
+            abi.encodePacked(type(pool).creationCode)
         );
 
         address expectedPoolAddress = vm.computeCreate2Address(

@@ -29,13 +29,14 @@ contract factory {
         );
 
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
-        //pool Pool = new pool{salt: salt}(token0, token1);
+        pool Pool = new pool{salt: salt}();
 
         address newPool = address(Pool);
 
         poolRegistry[token0][token1] = newPool;
         poolRegistry[token1][token0] = newPool;
         allPool.push(newPool);
+        Pool.initizalized(token0, token1); // moved it down to satisfy check - effects - interactions
         emit PoolCreated(token0, token1, newPool, allPool.length);
         return newPool;
     }

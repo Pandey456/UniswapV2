@@ -28,14 +28,16 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract pool is ERC20, ReentrancyGuard {
     /* State Variables */
-    address public immutable token0;
-    address public immutable token1;
+    address public token0;
+    address public token1;
     uint256 private constant MINIMUM_LIQUIDITY = 1000;
 
     /* Variables */
     address constant DEAD_ADDRESS = address(1);
     uint256 public qtyToken0; //X
     uint256 public qtyToken1; //Y
+    bool internal isInitialized;
+    address public immutable i_FactoryAdddress;
 
     /* Events */
     event Mint(
@@ -58,14 +60,20 @@ contract pool is ERC20, ReentrancyGuard {
     );
 
     /*constructor */
-    constructor(address _token0, address _token1) ERC20("LP_Token", "LPTKN") {
-        require(_token0 != address(0) && _token1 != address(0), "Zero Address");
-        require(_token0 != _token1, "Same Token");
-        token0 = _token0;
-        token1 = _token1;
+    constructor() ERC20("LP_Token", "LPTKN") {
+        i_FactoryAdddress = msg.sender;
     }
 
     /* Functions*/
+    function initizalized(address _token0, address _token1) external {
+        require(msg.sender == i_FactoryAdddress, "Not a Owner");
+        require(!isInitialized, "Already initizalized");
+        require(_token0 != address(0) && _token1 != address(0), "Zero Address");
+        require(_token0 != _token1, "Same Token");
+        isInitialized = true;
+        token0 = _token0;
+        token1 = _token1;
+    }
 
     function addLiquidity(
         uint256 _qtyToken0,

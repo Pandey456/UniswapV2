@@ -7,12 +7,12 @@ import {pool} from "../src/pool.sol";
 contract Router is ReentrancyGuard {
     address public immutable factoryAddress;
     bytes32 public immutable poolHash;
-    factory public Factory;
+
+    //factory public Factory;
 
     constructor(address _Factory) {
         factoryAddress = _Factory;
         poolHash = keccak256(type(pool).creationCode);
-        
     }
 
     function addLiquidity(
@@ -22,14 +22,24 @@ contract Router is ReentrancyGuard {
         uint256 _qtyToken1,
         address _user
     ) public nonReentrant {
-    
-        address poolAddress = factoryAddress.poolRegistry(token0, token1);
-        if (poolAddress == address(0)) {
-            //deploy factory
-            Factory = new factory();
-            poolAddress = Factory.createPool(_tokenA,_tokenB );
+        address poolAddress = factory(factoryAddress).poolRegistry(
+            token0,
+            token1
+        );
+        // if (poolAddress == address(0)) {
+        //     poolAddress = factoryAddress.createPool(_tokenA,_tokenB );
+        // }
+        poolAddress = factory(factoryAddress).createPool(_tokenA, _tokenB);
+        if (poolAddress != address(0)) {
+            require(
+                poolAddress == getExpectedAddr(_tokenA, _tokenB),
+                "Mathematical mismatch!"
+            );
         }
-        poolAddress
+        // } else {
+        //     // If it doesn't exist, create it
+        //     poolAddress = factory(factoryAddress).createPool(_tokenA, _tokenB);
+        // }
     }
 
     function getExpectedAddr(
