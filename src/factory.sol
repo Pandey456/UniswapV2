@@ -6,7 +6,6 @@ contract factory {
     mapping(address => mapping(address => address)) public poolRegistry;
 
     address[] public allPool;
-    address public immutable i_ROUTER;
     event PoolCreated(
         address indexed token0,
         address indexed token1,
