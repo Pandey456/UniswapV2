@@ -1,5 +1,6 @@
-//SPDX-License-Identifier:MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
+
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {factory} from "../src/factory.sol";
 import {pool} from "../src/pool.sol";
@@ -8,56 +9,116 @@ contract Router is ReentrancyGuard {
     address public immutable factoryAddress;
     bytes32 public immutable poolHash;
 
-    //factory public Factory;
+    event LiquidityAdded(
+        address indexed poolAddress,
+        address indexed user,
+        uint256 amountA,
+        uint256 amountB
+    );
 
-    constructor(address _Factory) {
-        factoryAddress = _Factory;
+    constructor(address _factory) {
+        factoryAddress = _factory;
         poolHash = keccak256(type(pool).creationCode);
     }
 
     function addLiquidity(
         address _tokenA,
         address _tokenB,
-        uint256 _qtyToken0,
-        uint256 _qtyToken1,
-        address _user
+        uint256 _amountA,
+        uint256 _amountB,
+        address _to
     ) public nonReentrant {
+        require(_tokenA != _tokenB, "Identical addresses");
+        require(_amountA > 0 && _amountB > 0, "Insufficient amounts");
+
         address poolAddress = factory(factoryAddress).poolRegistry(
-            token0,
-            token1
+            _tokenA,
+            _tokenB
         );
-        // if (poolAddress == address(0)) {
-        //     poolAddress = factoryAddress.createPool(_tokenA,_tokenB );
-        // }
-        poolAddress = factory(factoryAddress).createPool(_tokenA, _tokenB);
-        if (poolAddress != address(0)) {
+
+        if (poolAddress == address(0)) {
+            poolAddress = factory(factoryAddress).createPool(_tokenA, _tokenB);
+        }
+
+        uint256 reserve0 = pool(poolAddress).qtyToken0();
+        uint256 reserve1 = pool(poolAddress).qtyToken1();
+
+        uint256 amountAUsed;
+        uint256 amountBUsed;
+
+        if (reserve0 == 0 && reserve1 == 0) {
+            // Initial liquidity
+            amountAUsed = _amountA;
+            amountBUsed = _amountB;
+        } else {
+            (address token0, ) = sortToken(_tokenA, _tokenB);
+            (uint256 reserveA, uint256 reserveB) = _tokenA == token0
+                ? (reserve0, reserve1)
+                : (reserve1, reserve0);
+
+            // Calculate optimal amountB for given amountA (based on current ratio)
+            uint256 optimalB = (_amountA * reserveB) / reserveA;
+
+            if (optimalB <= _amountB) {
+                amountAUsed = _amountA;
+                amountBUsed = optimalB;
+            } else {
+                // Use all of tokenB, calculate required tokenA
+                uint256 optimalA = (_amountB * reserveA) / reserveB;
+                amountAUsed = optimalA;
+                amountBUsed = _amountB;
+            }
+
             require(
-                poolAddress == getExpectedAddr(_tokenA, _tokenB),
-                "Mathematical mismatch!"
+                amountAUsed <= _amountA && amountBUsed <= _amountB,
+                "High slippage"
             );
         }
-        // } else {
-        //     // If it doesn't exist, create it
-        //     poolAddress = factory(factoryAddress).createPool(_tokenA, _tokenB);
-        // }
+
+        pool(poolAddress).addLiquidity(amountAUsed, amountBUsed, _to);
+
+        emit LiquidityAdded(poolAddress, _to, amountAUsed, amountBUsed);
     }
 
     function getExpectedAddr(
         address _tokenA,
         address _tokenB
-    ) internal view returns (address) {
-        (address tokenA, address tokenB) = _tokenA < _tokenB
-            ? (_tokenA, _tokenB)
-            : (_tokenB, _tokenA);
-        bytes32 salt = keccak256(abi.encodePacked(tokenA, tokenB));
+    ) public view returns (address) {
+        (address token0, address token1) = sortToken(_tokenA, _tokenB);
+        bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         bytes32 hash = keccak256(
             abi.encodePacked(bytes1(0xff), factoryAddress, salt, poolHash)
         );
-        address expectedPoolAddress = address(uint160(uint256(hash)));
-        return expectedPoolAddress;
+        return address(uint160(uint256(hash)));
     }
 
-    function Swap() public nonReentrant {}
+    function sortToken(
+        address _tokenA,
+        address _tokenB
+    ) public pure returns (address token0, address token1) {
+        (token0, token1) = _tokenA < _tokenB
+            ? (_tokenA, _tokenB)
+            : (_tokenB, _tokenA);
+    }
 
-    function removeLiquidity() public nonReentrant {}
+    function swap(
+        address _tokenIn,
+        address _tokenOut,
+        uint256 _amountIn,
+        uint256 _amountOutMin,
+        address _to
+    ) external nonReentrant {
+        revert("Not implemented yet");
+    }
+
+    function removeLiquidity(
+        address _tokenA,
+        address _tokenB,
+        uint256 _liquidity,
+        uint256 _amountAMin,
+        uint256 _amountBMin,
+        address _to
+    ) external nonReentrant {
+        revert("Not implemented yet");
+    }
 }
