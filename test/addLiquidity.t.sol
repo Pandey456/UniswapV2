@@ -127,24 +127,6 @@ contract addLiquidity is Test {
         Pool.addLiquidity(10000, 10000, address(this));
     }
 
-    function testToken0TransferToPool() public {
-        //uint256 initialtoken0 = MockToken0.balanceOf(address(Pool));
-        MockToken0.approve(address(Pool), 10000);
-        MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000, address(this));
-        uint256 finaltoken0 = MockToken0.balanceOf(address(Pool));
-        assertEq(finaltoken0, 10000);
-    }
-
-    function testToken1TransferToPool() public {
-        //uint256 initialtoken0 = MockToken0.balanceOf(address(Pool));
-        MockToken0.approve(address(Pool), 10000);
-        MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000, address(this));
-        uint256 finaltoken1 = MockToken1.balanceOf(address(Pool));
-        assertEq(finaltoken1, 10000);
-    }
-
     function testLPTokenIsBurned() public {
         uint256 initialtotalLp = Pool.totalSupply();
 
@@ -160,18 +142,6 @@ contract addLiquidity is Test {
         assertEq(userLpTkn, 9000);
     }
 
-    function testSecondTimeLiquidity() public {
-        //uint256 initialtoken0 = MockToken0.balanceOf(address(Pool));
-        MockToken0.approve(address(Pool), 10000);
-        MockToken1.approve(address(Pool), 10000);
-        Pool.addLiquidity(10000, 10000, address(this));
-        MockToken0.approve(address(Pool), 500);
-        MockToken1.approve(address(Pool), 500);
-        Pool.addLiquidity(500, 500, address(this));
-        uint256 finaltoken0 = MockToken0.balanceOf(address(Pool));
-        assertEq(finaltoken0, 10500);
-    }
-
     function testLpTokenIsGenerated2ndTime() public {
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
@@ -182,19 +152,6 @@ contract addLiquidity is Test {
         Pool.addLiquidity(5000, 2000, address(this));
         uint256 userLpTkn = Pool.balanceOf(address(this));
         assertGt(userLpTkn, 9000); // Checks if userLpTkn > 9000
-    }
-
-    function testRevertsWhenNotTransferred() public {
-        mockToken0 NewToken = new mockToken0("MockTKN1", "MTKN_1", 1000);
-        pool Pool1 = new pool();
-        address owner = Pool1.i_FactoryAdddress();
-        vm.prank(owner);
-        Pool1.initizalized(address(NewToken), address(MockToken1));
-        NewToken.approve(address(Pool1), 500);
-        MockToken1.approve(address(Pool1), 500);
-
-        vm.expectRevert();
-        Pool1.addLiquidity(10000, 10000, address(this));
     }
 
     function testCheckFalseConditionOfTernary() public {

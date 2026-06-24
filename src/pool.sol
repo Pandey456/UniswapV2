@@ -98,17 +98,17 @@ contract pool is ERC20, ReentrancyGuard {
 
         _mint(_user, _LpTokenToMint);
         //Interactions
-        bool success1 = IERC20(token0).transferFrom(
-            msg.sender,
-            address(this),
-            _qtyToken0
-        );
-        bool success2 = IERC20(token1).transferFrom(
-            msg.sender,
-            address(this),
-            _qtyToken1
-        );
-        require(success1 && success2, "Transfer failed");
+        // bool success1 = IERC20(token0).transferFrom(
+        //     msg.sender,
+        //     address(this),
+        //     _qtyToken0
+        // );
+        // bool success2 = IERC20(token1).transferFrom(
+        //     msg.sender,
+        //     address(this),
+        //     _qtyToken1
+        // );
+        // require(success1 && success2, "Transfer failed");
 
         emit Mint(_user, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }

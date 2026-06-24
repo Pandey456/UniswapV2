@@ -4,6 +4,7 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {factory} from "../src/factory.sol";
 import {pool} from "../src/pool.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract Router is ReentrancyGuard {
     address public immutable factoryAddress;
@@ -69,11 +70,11 @@ contract Router is ReentrancyGuard {
                 amountBUsed = _amountB;
             }
 
-            require(
-                amountAUsed <= _amountA && amountBUsed <= _amountB,
-                "High slippage"
-            );
+            assert(amountAUsed <= _amountA && amountBUsed <= _amountB);
         }
+        //interactions
+        IERC20(_tokenA).transferFrom(msg.sender, poolAddress, amountAUsed);
+        IERC20(_tokenB).transferFrom(msg.sender, poolAddress, amountBUsed);
 
         pool(poolAddress).addLiquidity(amountAUsed, amountBUsed, _to);
 
@@ -101,24 +102,24 @@ contract Router is ReentrancyGuard {
             : (_tokenB, _tokenA);
     }
 
-    function swap(
-        address _tokenIn,
-        address _tokenOut,
-        uint256 _amountIn,
-        uint256 _amountOutMin,
-        address _to
-    ) external nonReentrant {
-        revert("Not implemented yet");
-    }
+    // function swap(
+    //     address _tokenIn,
+    //     address _tokenOut,
+    //     uint256 _amountIn,
+    //     uint256 _amountOutMin,
+    //     address _to
+    // ) external nonReentrant {
+    //     revert("Not implemented yet");
+    // }
 
-    function removeLiquidity(
-        address _tokenA,
-        address _tokenB,
-        uint256 _liquidity,
-        uint256 _amountAMin,
-        uint256 _amountBMin,
-        address _to
-    ) external nonReentrant {
-        revert("Not implemented yet");
-    }
+    // function removeLiquidity(
+    //     address _tokenA,
+    //     address _tokenB,
+    //     uint256 _liquidity,
+    //     uint256 _amountAMin,
+    //     uint256 _amountBMin,
+    //     address _to
+    // ) external nonReentrant {
+    //     revert("Not implemented yet");
+    // }
 }

@@ -37,8 +37,11 @@ contract removeLiquidity is Test {
         vm.prank(owner);
         Pool.initizalized(address(MockToken0), address(MockToken1));
 
-        MockToken0.approve(address(Pool), 10000);
-        MockToken1.approve(address(Pool), 10000);
+        // MockToken0.approve(address(Pool), 10000);
+        // MockToken1.approve(address(Pool), 10000);
+        // Pool.addLiquidity(10000, 10000, address(this));
+        MockToken0.transfer(address(Pool), 10000);
+        MockToken1.transfer(address(Pool), 10000);
         Pool.addLiquidity(10000, 10000, address(this));
     }
 
