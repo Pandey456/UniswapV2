@@ -111,6 +111,60 @@ contract Router is ReentrancyGuard {
     // ) external nonReentrant {
     //     revert("Not implemented yet");
     // }
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata hopPath,
+        address to,
+        uint256 deadline
+    ) external nonReentrant {
+        require(block.timestamp <= deadline, "Router: EXPIRED");
+        uint256[] memory amount = new uint256[](hopPath.length);
+        amount[0] = amountIn;
+        for (uint256 i = 0; i < hopPath.length - 1; i++) {
+            address tokenIn = hopPath[i];
+            address tokenOut = hopPath[i + 1];
+            address poolAddressExpected = getExpectedAddr(tokenIn, tokenOut);
+            uint256 reserv0 = pool(poolAddressExpected).qtyToken0();
+            uint256 reserv1 = pool(poolAddressExpected).qtyToken1();
+            address poolToken0 = pool(poolAddressExpected).token0();
+            (
+                uint256 reserveOfTokenIn,
+                uint256 reserveOfTokenOut
+            ) = poolToken0 == tokenIn ? (reserv0, reserv1) : (reserv1, reserv0);
+            //Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)
+            // Δx --> amount[i]
+            //Δy --> amount [i+1]
+            //X --> reserveOfTokenIn
+            //Y --> reserveOfTokenOut
+            amount[i + 1] =
+                (reserveOfTokenOut * amount[i] * 997) /
+                (reserveOfTokenIn * 1000 + amount[i] * 997);
+        }
+        require(
+            amount[hopPath.length - 1] >= amountOutMin,
+            "Router: INSUFFICIENT_OUTPUT_AMOUNT"
+        );
+        address firstPool = getExpectedAddr(hopPath[0], hopPath[1]);
+        require(
+            IERC20(hopPath[0]).transferFrom(msg.sender, firstPool, amount[0]),
+            "User Transfer Failed"
+        );
+        for (uint256 i = 0; i < hopPath.length - 1; i++) {
+            address tokenIn = hopPath[i];
+            address tokenOut = hopPath[i + 1];
+            address poolAddressExpected = getExpectedAddr(tokenIn, tokenOut);
+            address addressto = i < hopPath.length - 2
+                ? getExpectedAddr(tokenOut, hopPath[i + 2])
+                : to;
+            pool(poolAddressExpected).swap(
+                amount[i],
+                hopPath[i],
+                amount[i + 1],
+                addressto
+            );
+        }
+    }
 
     // function removeLiquidity(
     //     address _tokenA,

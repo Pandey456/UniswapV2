@@ -174,14 +174,14 @@ contract pool is ERC20, ReentrancyGuard {
 
         //transfer
 
-        require(
-            IERC20(_tokenIn).transferFrom(
-                msg.sender,
-                address(this),
-                _tokenAmtIn
-            ),
-            "In Transfer Failed"
-        );
+        // require(
+        //     IERC20(_tokenIn).transferFrom(
+        //         msg.sender,
+        //         address(this),
+        //         _tokenAmtIn
+        //     ),
+        //     "In Transfer Failed"
+        // );
         require(
             IERC20(_tokenOut).transfer(_user, _tokenAmtOut),
             "Out Transfer Failed"
