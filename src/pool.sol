@@ -193,15 +193,15 @@ contract pool is ERC20, ReentrancyGuard {
     function removeLiquidity(
         uint256 _lpTokenQty,
         address _user
-    ) public nonReentrant {
+    ) public nonReentrant returns (uint256 amount0, uint256 amount1) {
         //Checks
         require(_lpTokenQty > 0, "Zero LP Token");
         require(qtyToken0 > 0 && qtyToken1 > 0, "Insufficient Liquidity");
         //Effects
         //amount0 = (shares · reserve0) / totalSupply
         uint256 totalLpSupply = totalSupply();
-        uint256 amount0 = (_lpTokenQty * qtyToken0) / totalLpSupply;
-        uint256 amount1 = (_lpTokenQty * qtyToken1) / totalLpSupply;
+        amount0 = (_lpTokenQty * qtyToken0) / totalLpSupply;
+        amount1 = (_lpTokenQty * qtyToken1) / totalLpSupply;
         require(amount0 > 0 && amount1 > 0, "Insufficient Amounts");
 
         qtyToken0 = qtyToken0 - amount0;
@@ -210,14 +210,14 @@ contract pool is ERC20, ReentrancyGuard {
 
         _burn(msg.sender, _lpTokenQty);
 
-        require(
-            IERC20(token0).transfer(_user, amount0),
-            "Token_0 Transfer Failed"
-        );
-        require(
-            IERC20(token1).transfer(_user, amount1),
-            "Token_1 Transfer Failed"
-        );
+        // require(
+        //     IERC20(token0).transfer(_user, amount0),
+        //     "Token_0 Transfer Failed"
+        // );
+        // require(
+        //     IERC20(token1).transfer(_user, amount1),
+        //     "Token_1 Transfer Failed"
+        // );
         emit RemovedLiquidity(_user, _lpTokenQty, amount0, amount1);
     }
 }

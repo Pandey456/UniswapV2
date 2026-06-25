@@ -166,14 +166,12 @@ contract Router is ReentrancyGuard {
         }
     }
 
-    // function removeLiquidity(
-    //     address _tokenA,
-    //     address _tokenB,
-    //     uint256 _liquidity,
-    //     uint256 _amountAMin,
-    //     uint256 _amountBMin,
-    //     address _to
-    // ) external nonReentrant {
-    //     revert("Not implemented yet");
-    // }
+    function removeLiquidity(
+        uint256 _lpTokenQty,
+        address poolAddress, // this ntg but token address
+        address _user,
+        
+    ) external nonReentrant {
+        pool(poolAddress).removeLiquidity(_lpTokenQty, _user);
+    }
 }
