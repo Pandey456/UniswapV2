@@ -210,14 +210,14 @@ contract pool is ERC20, ReentrancyGuard {
 
         _burn(msg.sender, _lpTokenQty);
 
-        // require(
-        //     IERC20(token0).transfer(_user, amount0),
-        //     "Token_0 Transfer Failed"
-        // );
-        // require(
-        //     IERC20(token1).transfer(_user, amount1),
-        //     "Token_1 Transfer Failed"
-        // );
+        require(
+            IERC20(token0).transfer(_user, amount0),
+            "Token_0 Transfer Failed"
+        );
+        require(
+            IERC20(token1).transfer(_user, amount1),
+            "Token_1 Transfer Failed"
+        );
         emit RemovedLiquidity(_user, _lpTokenQty, amount0, amount1);
     }
 }
