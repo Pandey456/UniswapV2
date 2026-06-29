@@ -1,0 +1,29 @@
+{
+  "name": "assessment_2_uniswapv2",
+  "version": "1.0.0",
+  "description": "Building a Uniswap V2–style AMM in Solidity + Foundry. This is a learning project — I'm working through the V2 architecture by implementing it from first principles, one contract at a time.",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pandey456/assingment_2_UniswapV2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Pandey456/assingment_2_UniswapV2/issues"
+  },
+  "homepage": "https://github.com/Pandey456/assingment_2_UniswapV2#readme",
+  "devDependencies": {
+    "prettier": "^3.9.3",
+    "prettier-plugin-solidity": "^2.3.1"
+  }
+}

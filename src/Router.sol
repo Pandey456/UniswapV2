@@ -181,8 +181,7 @@ contract Router is ReentrancyGuard {
                 _lpTokenQty
             );
         (uint256 actualAmt0 , uint256 actualAmt0 ) = pool(poolAddress).removeLiquidity(_lpTokenQty, _user);
-               require(actualAmt0 >= _qtyAmount0Min, 
-               "Router: Insufficient Token0 output");
+               require(actualAmt0 >= _qtyAmount0Min,   "Router: Insufficient Token0 output");
     require(actualAmt1 >= _qtyAmount1Min, "Router: Insufficient Token1 output");
        
        
