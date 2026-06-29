@@ -5,10 +5,12 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {factory} from "../src/factory.sol";
 import {pool} from "../src/pool.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Router is ReentrancyGuard {
     address public immutable factoryAddress;
     bytes32 public immutable poolHash;
+    using SafeERC20 for IERC20;
 
     event LiquidityAdded(
         address indexed poolAddress,
@@ -18,6 +20,7 @@ contract Router is ReentrancyGuard {
     );
 
     constructor(address _factory) {
+        require(_factory != address(0), "Router: Zero address");
         factoryAddress = _factory;
         poolHash = keccak256(type(pool).creationCode);
     }
@@ -73,8 +76,8 @@ contract Router is ReentrancyGuard {
             assert(amountAUsed <= _amountA && amountBUsed <= _amountB);
         }
         //interactions
-        IERC20(_tokenA).transferFrom(msg.sender, poolAddress, amountAUsed);
-        IERC20(_tokenB).transferFrom(msg.sender, poolAddress, amountBUsed);
+        IERC20(_tokenA).safeTransferFrom(msg.sender, poolAddress, amountAUsed);
+        IERC20(_tokenB).safeTransferFrom(msg.sender, poolAddress, amountBUsed);
 
         pool(poolAddress).addLiquidity(amountAUsed, amountBUsed, _to);
 
@@ -102,16 +105,7 @@ contract Router is ReentrancyGuard {
             : (_tokenB, _tokenA);
     }
 
-    // function swap(
-    //     address _tokenIn,
-    //     address _tokenOut,
-    //     uint256 _amountIn,
-    //     uint256 _amountOutMin,
-    //     address _to
-    // ) external nonReentrant {
-    //     revert("Not implemented yet");
-    // }
-    function swapExactTokensForTokens(
+    function swap(
         uint256 amountIn,
         uint256 amountOutMin,
         address[] calldata hopPath,
@@ -146,10 +140,8 @@ contract Router is ReentrancyGuard {
             "Router: INSUFFICIENT_OUTPUT_AMOUNT"
         );
         address firstPool = getExpectedAddr(hopPath[0], hopPath[1]);
-        require(
-            IERC20(hopPath[0]).transferFrom(msg.sender, firstPool, amount[0]),
-            "User Transfer Failed"
-        );
+
+        IERC20(hopPath[0]).safeTransferFrom(msg.sender, firstPool, amount[0]);
         for (uint256 i = 0; i < hopPath.length - 1; i++) {
             address tokenIn = hopPath[i];
             address tokenOut = hopPath[i + 1];
@@ -170,20 +162,23 @@ contract Router is ReentrancyGuard {
         uint256 _lpTokenQty,
         address poolAddress, // this ntg but token address
         address _user,
-        uint256 _qtyAmount0,
-        uint256 _qtyAmount1;
-        
+        uint256 _qtyAmount0Min,
+        uint256 _qtyAmount1Min
     ) external nonReentrant {
-         
-            IERC20(poolAddress).transferFrom(
-                msg.sender,
-                address(this),
-                _lpTokenQty
-            );
-        (uint256 actualAmt0 , uint256 actualAmt0 ) = pool(poolAddress).removeLiquidity(_lpTokenQty, _user);
-               require(actualAmt0 >= _qtyAmount0Min,   "Router: Insufficient Token0 output");
-    require(actualAmt1 >= _qtyAmount1Min, "Router: Insufficient Token1 output");
-       
-       
+        IERC20(poolAddress).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _lpTokenQty
+        );
+        (uint256 actualAmt0, uint256 actualAmt1) = pool(poolAddress)
+            .removeLiquidity(_lpTokenQty, _user);
+        require(
+            actualAmt0 >= _qtyAmount0Min,
+            "Router: Insufficient Token0 output"
+        );
+        require(
+            actualAmt1 >= _qtyAmount1Min,
+            "Router: Insufficient Token1 output"
+        );
     }
 }
