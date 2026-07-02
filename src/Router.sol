@@ -158,27 +158,27 @@ contract Router is ReentrancyGuard {
         }
     }
 
-    // function removeLiquidity(
-    //     uint256 _lpTokenQty,
-    //     address poolAddress, // this ntg but token address
-    //     address _user,
-    //     uint256 _qtyAmount0Min,
-    //     uint256 _qtyAmount1Min
-    // ) external nonReentrant {
-    //     IERC20(poolAddress).safeTransferFrom(
-    //         msg.sender,
-    //         address(this),
-    //         _lpTokenQty
-    //     );
-    //     (uint256 actualAmt0, uint256 actualAmt1) = pool(poolAddress)
-    //         .removeLiquidity(_lpTokenQty, _user);
-    //     require(
-    //         actualAmt0 >= _qtyAmount0Min,
-    //         "Router: Insufficient Token0 output"
-    //     );
-    //     require(
-    //         actualAmt1 >= _qtyAmount1Min,
-    //         "Router: Insufficient Token1 output"
-    //     );
-    // }
+    function removeLiquidity(
+        uint256 _lpTokenQty,
+        address poolAddress, // this ntg but token address
+        address _user,
+        uint256 _qtyAmount0Min,
+        uint256 _qtyAmount1Min
+    ) external nonReentrant {
+        IERC20(poolAddress).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _lpTokenQty
+        );
+        (uint256 actualAmt0, uint256 actualAmt1) = pool(poolAddress)
+            .removeLiquidity(_lpTokenQty, _user);
+        require(
+            actualAmt0 >= _qtyAmount0Min,
+            "Router: Insufficient Token0 output"
+        );
+        require(
+            actualAmt1 >= _qtyAmount1Min,
+            "Router: Insufficient Token1 output"
+        );
+    }
 }
