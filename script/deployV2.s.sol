@@ -15,7 +15,7 @@ contract deployV2 is Script {
         router = new Router(address(Factory));
         vm.stopBroadcast();
         console2.log("=== Sepolia Deployment Successful ===");
-        console2.log("Factory Address:", existingFactory);
+        console2.log("Factory Address:", address(Factory));
         console2.log("Router Address: ", address(router));
         console2.log("=====================================");
     }
