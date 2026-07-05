@@ -8,12 +8,11 @@ import {Router} from "../src/Router.sol";
 contract deployV2 is Script {
     factory public Factory;
     Router public router;
-    address existingFactory = 0xe072286F025dABa307478c279d299EE3046A289e;
 
     function run() public {
         vm.startBroadcast();
-        // Factory = new factory();
-        router = new Router(existingFactory);
+        Factory = new factory();
+        router = new Router(address(Factory));
         vm.stopBroadcast();
         console2.log("=== Sepolia Deployment Successful ===");
         console2.log("Factory Address:", existingFactory);
