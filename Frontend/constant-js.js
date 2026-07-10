@@ -1,5 +1,5 @@
-export const routerAddress = 0xcd120072e53a337df9b018c9c77a9032232bc716;
-export const factoryAddress = 0xe072286f025daba307478c279d299ee3046a289e;
+export const routerAddress = "0xcd120072e53a337df9b018c9c77a9032232bc716";
+export const factoryAddress = "0xe072286f025daba307478c279d299ee3046a289e";
 export const factoryABI = [
   {
     type: "function",
