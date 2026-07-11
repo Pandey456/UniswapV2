@@ -11,11 +11,12 @@ import {
   factoryABI,
   routerABI,
   poolABI,
+  erc20ABI,
 } from "./constant-js.js";
 import { sepolia } from "https://esm.sh/viem/chains";
 const connectBTN = document.getElementById("connect-btn");
 const addLiquidityBTN = document.getElementById("addLiquidity_btn");
-
+const currentChain = sepolia;
 const Token1Address = document.getElementById("Tkn1");
 const Token2Address = document.getElementById("Tkn2");
 const QuantityToken1 = document.getElementById("Qty1");
@@ -44,7 +45,7 @@ async function addLiquidity(e) {
       transport: custom(window.ethereum),
     });
   }
-  console.log("heyyeye");
+
   // this block is only to get msg.sender ----------------------
   const [accountAddress] = await walletClient.requestAddresses();
   // upto here ------------------------------------------
@@ -56,6 +57,55 @@ async function addLiquidity(e) {
   const qty1 = parseEther(QuantityToken1.value);
   const qty2 = parseEther(QuantityToken2.value);
 
+  // ----------------- CHECK & APPROVE TOKEN 1 -----------------
+  const allowance1 = await publicClient.readContract({
+    address: tkn1,
+    abi: erc20ABI,
+    functionName: "allowance",
+    args: [accountAddress, routerAddress],
+  });
+
+  if (allowance1 < qty1) {
+    addLiquidityBTN.innerText = "Approving Token 1...";
+    const { request } = await publicClient.simulateContract({
+      address: tkn1,
+      abi: erc20ABI,
+      functionName: "approve",
+      args: [routerAddress, qty1],
+      account: accountAddress,
+    });
+    const txHash = await walletClient.writeContract({
+      ...request,
+      chain: currentChain,
+    });
+    // Wait for approval transaction to be mined before proceeding
+    await publicClient.waitForTransactionReceipt({ hash: txHash });
+  }
+
+  // ----------------- CHECK & APPROVE TOKEN 2 -----------------
+  const allowance2 = await publicClient.readContract({
+    address: tkn2,
+    abi: erc20ABI,
+    functionName: "allowance",
+    args: [accountAddress, routerAddress],
+  });
+
+  if (allowance2 < qty2) {
+    addLiquidityBTN.innerText = "Approving Token 2...";
+    const { request } = await publicClient.simulateContract({
+      address: tkn2,
+      abi: erc20ABI,
+      functionName: "approve",
+      args: [routerAddress, qty2],
+      account: accountAddress,
+    });
+    const txHash = await walletClient.writeContract({
+      ...request,
+      chain: currentChain,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: txHash });
+  }
+
   const { request } = await publicClient.simulateContract({
     address: routerAddress,
     abi: routerABI,
@@ -63,6 +113,9 @@ async function addLiquidity(e) {
     args: [tkn1, tkn2, qty1, qty2, accountAddress],
     account: accountAddress,
   });
-  const addLiquidityTxn = await walletClient.writeContract(request);
+  const addLiquidityTxn = await walletClient.writeContract({
+    ...request,
+    chain: currentChain,
+  });
   console.log("Transaction submitted! Hash:", addLiquidityTxn);
 }
