@@ -1,0 +1,121 @@
+/* Base Card Container */
+.card {
+  width: 360px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.05),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 24px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  margin: 20px auto; /* Centers the card on the screen */
+  border: 1px solid #f3f4f6;
+}
+
+/* Title Styling */
+.card h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.35rem;
+  color: #111827;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* Form Layout */
+#addLiquidity_form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px; /* Even spacing between fields */
+}
+
+/* Input Labels */
+#addLiquidity_form label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: -6px; /* Pulls label closer to its input */
+}
+
+/* Input Fields */
+#addLiquidity_form input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  color: #1f2937;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-sizing: border-box; /* Crucial: Keeps padding from breaking width */
+  transition: all 0.2s ease;
+}
+
+/* Input Focus State */
+#addLiquidity_form input:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Action Button */
+#addLiquidity_btn {
+  width: 100%;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+}
+
+#addLiquidity_btn:hover {
+  background-color: #1d4ed8;
+}
+
+#addLiquidity_btn:active {
+  transform: scale(0.98); /* Tactile press down animation */
+}
+/* Connect Wallet Button Style */
+#connect-btn {
+  background-color: #10b981; /* Web3 green for "active/online" */
+  color: #ffffff;
+  border: 1px solid #059669;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: capitalize; /* Automatically handles "connect" vs "Connected" capitalization */
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+  transition: all 0.2s ease;
+}
+
+/* Hover State */
+#connect-btn:hover {
+  background-color: #059669;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+}
+
+/* Active Click Effect */
+#connect-btn:active {
+  transform: scale(0.97);
+}
+
+/* Focus State (For keyboard accessibility) */
+#connect-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+}
