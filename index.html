@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="./index-js.js" type="module"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" />
     <title>Uniswap V2</title>
   </head>
   <body>
@@ -21,6 +21,32 @@
         <label for="Qty2">Qty-2</label>
         <input id="Qty2" />
         <button type="submit" id="addLiquidity_btn">Add Liquidity</button>
+      </form>
+    </div>
+    <div class="card">
+      <h3>Swap</h3>
+      <form id="Swap-frm">
+        <label for="FromTkn">From</label>
+        <select id="FromTkn">
+          <option value="" disabled selected>
+            Connect Wallet to get token list
+          </option>
+        </select>
+
+        <label for="FrmQty">Spend</label>
+        <input type="number" step="any" id="FrmQty" placeholder="0.0" />
+
+        <label for="ToTkn">To</label>
+        <select id="ToTkn">
+          <option value="" disabled selected>
+            Connect Wallet to get token list
+          </option>
+        </select>
+
+        <label for="ToQty">Receive (Estimated)</label>
+        <input type="number" step="any" id="ToQty" placeholder="0.0" readonly />
+
+        <button type="submit" id="Swap_btn">Swap</button>
       </form>
     </div>
   </body>

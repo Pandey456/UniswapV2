@@ -25,14 +25,16 @@
 }
 
 /* Form Layout */
-#addLiquidity_form {
+#addLiquidity_form,
+#Swap-frm {
   display: flex;
   flex-direction: column;
   gap: 14px; /* Even spacing between fields */
 }
 
 /* Input Labels */
-#addLiquidity_form label {
+#addLiquidity_form,
+#Swap-frm label {
   font-size: 0.85rem;
   font-weight: 600;
   color: #4b5563;
@@ -40,7 +42,8 @@
 }
 
 /* Input Fields */
-#addLiquidity_form input {
+#addLiquidity_form,
+#Swap-frm input {
   width: 100%;
   padding: 10px 12px;
   font-size: 0.95rem;
@@ -53,7 +56,8 @@
 }
 
 /* Input Focus State */
-#addLiquidity_form input:focus {
+#addLiquidity_form,
+#Swap-frm input:focus {
   outline: none;
   border-color: #2563eb;
   background-color: #ffffff;
@@ -61,7 +65,8 @@
 }
 
 /* Action Button */
-#addLiquidity_btn {
+#addLiquidity_btn,
+#Swap_btn {
   width: 100%;
   background-color: #2563eb;
   color: #ffffff;
@@ -77,11 +82,13 @@
     transform 0.1s ease;
 }
 
-#addLiquidity_btn:hover {
+#addLiquidity_btn:hover,
+#Swap_btn:hover {
   background-color: #1d4ed8;
 }
 
-#addLiquidity_btn:active {
+#addLiquidity_btn:active,
+#Swap_btn:active {
   transform: scale(0.98); /* Tactile press down animation */
 }
 /* Connect Wallet Button Style */
@@ -118,4 +125,26 @@
 #connect-btn:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+}
+#addLiquidity_form input,
+#Swap-frm input,
+#Swap-frm select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  color: #1f2937;
+  background-color: #f9fafb;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+#addLiquidity_form input:focus,
+#Swap-frm input:focus,
+#Swap-frm select:focus {
+  outline: none;
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }

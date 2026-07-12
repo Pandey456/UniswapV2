@@ -24,6 +24,7 @@ const QuantityToken2 = document.getElementById("Qty2");
 
 let walletClient;
 let publicClient;
+let allPairs = [];
 connectBTN.onclick = connect;
 addLiquidityBTN.onclick = addLiquidity;
 async function connect() {
@@ -33,6 +34,7 @@ async function connect() {
     });
     await walletClient.requestAddresses();
     connectBTN.innerHTML = "Connected";
+    await getAllTokens();
   } else {
     connectBTN.innerHTML = "Install Metamask First";
   }
@@ -113,9 +115,61 @@ async function addLiquidity(e) {
     args: [tkn1, tkn2, qty1, qty2, accountAddress],
     account: accountAddress,
   });
+  addLiquidityBTN.innerText = "Adding Liquidity...";
   const addLiquidityTxn = await walletClient.writeContract({
     ...request,
     chain: currentChain,
   });
   console.log("Transaction submitted! Hash:", addLiquidityTxn);
+  addLiquidityBTN.innerText = "Successs!";
+}
+async function getAllTokens() {
+  const fromDropdown = document.getElementById("FromTkn");
+  const toDropdown = document.getElementById("ToTkn");
+  const publicClient = createPublicClient({
+    transport: custom(window.ethereum),
+  });
+  const poolLength = await publicClient.readContract({
+    address: factoryAddress,
+    abi: factoryABI,
+    functionName: "getPoolLength",
+  });
+  console.log("Length = ", poolLength);
+  const uniqueTokens = new Set();
+  for (let i = 0; i < poolLength; i++) {
+    const poolAddr = await publicClient.readContract({
+      address: factoryAddress,
+      abi: factoryABI,
+      functionName: "allPool",
+      args: [BigInt(i)],
+    });
+    const token0 = await publicClient.readContract({
+      address: poolAddr,
+      abi: poolABI,
+      functionName: "token0",
+    });
+
+    const token1 = await publicClient.readContract({
+      address: poolAddr,
+      abi: poolABI,
+      functionName: "token1",
+    });
+    allPairs.push({ token0, token1 });
+    uniqueTokens.add(token0);
+    uniqueTokens.add(token1);
+  }
+  fromDropdown.innerHTML =
+    '<option value="" disabled selected>Select Token</option>';
+  toDropdown.innerHTML =
+    '<option value="" disabled selected>Select Token</option>';
+  for (const tokenAddress of uniqueTokens) {
+    const tokenSymbol = await publicClient.readContract({
+      address: tokenAddress,
+      abi: erc20ABI,
+      functionName: "name",
+    });
+    const optionHTML = `<option value="${tokenAddress}">${tokenSymbol}</option>`;
+    fromDropdown.insertAdjacentHTML("beforeend", optionHTML);
+    toDropdown.insertAdjacentHTML("beforeend", optionHTML);
+  }
 }

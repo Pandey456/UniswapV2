@@ -930,6 +930,13 @@ export const poolABI = [
 ];
 export const erc20ABI = [
   {
+    name: "name",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "string" }],
+  },
+  {
     name: "approve",
     type: "function",
     stateMutability: "nonpayable",
