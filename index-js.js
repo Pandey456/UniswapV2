@@ -172,4 +172,10 @@ async function getAllTokens() {
     fromDropdown.insertAdjacentHTML("beforeend", optionHTML);
     toDropdown.insertAdjacentHTML("beforeend", optionHTML);
   }
+
+  function findHopPath(startToken, endToken, pairs) {
+    const start = startToken.toLowerCase();
+    const end = endToken.toLowerCase();
+    if (start === end) return [start];
+  }
 }
