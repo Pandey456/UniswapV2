@@ -154,7 +154,7 @@ async function getAllTokens() {
       abi: poolABI,
       functionName: "token1",
     });
-    allPairs.push({ token0, token1 });
+    allPairs.push({ token0: token0, token1: token1 });
     uniqueTokens.add(token0);
     uniqueTokens.add(token1);
   }
@@ -172,10 +172,38 @@ async function getAllTokens() {
     fromDropdown.insertAdjacentHTML("beforeend", optionHTML);
     toDropdown.insertAdjacentHTML("beforeend", optionHTML);
   }
+}
 
-  function findHopPath(startToken, endToken, pairs) {
-    const start = startToken.toLowerCase();
-    const end = endToken.toLowerCase();
-    if (start === end) return [start];
+function findHopPath(startToken, endToken, pairs) {
+  const start = startToken.toLowerCase();
+  const end = endToken.toLowerCase();
+  if (start === end) return [start];
+  const adList = {};
+  pairs.forEach((pair) => {
+    const t0 = pair.token0.toLowerCase();
+    const t1 = pair.token1.toLowerCase();
+    if (!adList[t0]) adList[t0] = [];
+    if (!adList[t1]) adList[t1] = [];
+    adList[t0].push(t1);
+    adList[t1].push(t0);
+  });
+  if (!adList[start] || !adList[end]) return null;
+  const queue = [[start]];
+  const visited = new Set([start]);
+  while (queue.length > 0) {
+    const path = queue.shift();
+    const currentToken = path[path.length - 1];
+    if (currentToken === end) {
+      return path;
+    }
+    const nextNodes = adList[currentToken] || [];
+    for (const nextNode of nextNodes) {
+      if (!visited.has(nextNode)) {
+        visited.add(nextNode);
+        const newPath = [...path, nextNode];
+        queue.push(newPath);
+      }
+    }
   }
+  return null;
 }
