@@ -17,13 +17,23 @@ import { sepolia } from "https://esm.sh/viem/chains";
 const connectBTN = document.getElementById("connect-btn");
 const addLiquidityBTN = document.getElementById("addLiquidity_btn");
 const currentChain = sepolia;
+//for add liquidity
 const Token1Address = document.getElementById("Tkn1");
 const Token2Address = document.getElementById("Tkn2");
 const QuantityToken1 = document.getElementById("Qty1");
 const QuantityToken2 = document.getElementById("Qty2");
+// for swap
+const fromDropdown = document.getElementById("FromTkn");
+const toDropdown = document.getElementById("ToTkn");
+const spendInput = document.getElementById("FrmQty");
+const receiveInput = document.getElementById("ToQty");
+const swapBTN = document.getElementById("Swap_btn");
 
 let walletClient;
-let publicClient;
+let publicClient = createPublicClient({
+  chain: sepolia,
+  transport: custom(window.ethereum),
+});
 let allPairs = [];
 connectBTN.onclick = connect;
 addLiquidityBTN.onclick = addLiquidity;
@@ -51,9 +61,9 @@ async function addLiquidity(e) {
   // this block is only to get msg.sender ----------------------
   const [accountAddress] = await walletClient.requestAddresses();
   // upto here ------------------------------------------
-  const publicClient = createPublicClient({
-    transport: custom(window.ethereum),
-  });
+  // const publicClient = createPublicClient({
+  //   transport: custom(window.ethereum),
+  // });
   const tkn1 = Token1Address.value;
   const tkn2 = Token2Address.value;
   const qty1 = parseEther(QuantityToken1.value);
@@ -126,9 +136,9 @@ async function addLiquidity(e) {
 async function getAllTokens() {
   const fromDropdown = document.getElementById("FromTkn");
   const toDropdown = document.getElementById("ToTkn");
-  const publicClient = createPublicClient({
-    transport: custom(window.ethereum),
-  });
+  // const publicClient = createPublicClient({
+  //   transport: custom(window.ethereum),
+  // });
   const poolLength = await publicClient.readContract({
     address: factoryAddress,
     abi: factoryABI,
@@ -174,10 +184,10 @@ async function getAllTokens() {
   }
 }
 
-function findHopPath(startToken, endToken, pairs) {
+async function getRouteAndEstimate(startToken, endToken, rawAmountIn, pairs) {
   const start = startToken.toLowerCase();
   const end = endToken.toLowerCase();
-  if (start === end) return [start];
+  if (start === end) return { path: [start], estimate: rawAmountIn };
   const adList = {};
   pairs.forEach((pair) => {
     const t0 = pair.token0.toLowerCase();
@@ -190,11 +200,13 @@ function findHopPath(startToken, endToken, pairs) {
   if (!adList[start] || !adList[end]) return null;
   const queue = [[start]];
   const visited = new Set([start]);
+  let winningPath = null;
   while (queue.length > 0) {
     const path = queue.shift();
     const currentToken = path[path.length - 1];
     if (currentToken === end) {
-      return path;
+      winningPath = path;
+      break;
     }
     const nextNodes = adList[currentToken] || [];
     for (const nextNode of nextNodes) {
@@ -205,5 +217,100 @@ function findHopPath(startToken, endToken, pairs) {
       }
     }
   }
-  return null;
+  if (!winningPath) return null;
+  try {
+    let currentAmount = parseEther(rawAmountIn);
+    for (let i = 0; i < winningPath.length - 1; i++) {
+      const currentToken = winningPath[i];
+      const nextToken = winningPath[i + 1];
+      const poolAddress = await publicClient.readContract({
+        address: routerAddress,
+        abi: routerABI,
+        functionName: "getExpectedAddr",
+        args: [currentToken, nextToken],
+      });
+      // get reserve 0 from pool
+      const reserve0 = await publicClient.readContract({
+        address: poolAddress,
+        abi: poolABI,
+        functionName: "qtyToken0",
+      });
+      // get reserve 1 from pool
+      const reserve1 = await publicClient.readContract({
+        address: poolAddress,
+        abi: poolABI,
+        functionName: "qtyToken1",
+      });
+      // get token 0 from pool , so we can match it and sort
+      const token0 = await publicClient.readContract({
+        address: poolAddress,
+        abi: poolABI,
+        functionName: "token0",
+      });
+      // sorting to avaoid any mismatch in token address and quantity
+      const [reserveIn, reserveOut] =
+        currentToken.toLowerCase() === token0.toLowerCase()
+          ? [reserve0, reserve1]
+          : [reserve1, reserve0];
+      if (reserveIn === 0n || reserveOut === 0n)
+        return { path: winningPath, estimate: "0.0" };
+      // Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)
+      const amountInWithFee = currentAmount * 997n;
+      const numerator = amountInWithFee * reserveOut;
+      const denominator = reserveIn * 1000n + amountInWithFee;
+
+      currentAmount = numerator / denominator;
+    }
+    return {
+      path: winningPath,
+      estimate: formatEther(currentAmount),
+    };
+  } catch (error) {
+    console.error("Failed to calculate pool price matrix:", error);
+    return { path: winningPath, estimate: "Error" };
+  }
 }
+function calculateMinimumAmount(expectedAmount) {
+  const amount = BigInt(expectedAmount);
+  if (amount === 0n) return 0n;
+
+  return (amount * 97n) / 100n;
+}
+
+async function updateEstimatedOutput() {
+  const tokenIn = fromDropdown.value;
+  const tokenOut = toDropdown.value;
+  const rawAmountIn = spendInput.value;
+
+  // Clear output field early if inputs are incomplete
+  if (!tokenIn || !tokenOut || !rawAmountIn || parseFloat(rawAmountIn) <= 0) {
+    receiveInput.value = "";
+    return;
+  }
+
+  try {
+    receiveInput.value = "Calculating...";
+
+    const result = await getRouteAndEstimate(
+      tokenIn,
+      tokenOut,
+      rawAmountIn,
+      allPairs,
+    );
+
+    if (!result || result.estimate === "0.0") {
+      receiveInput.value = "No Liquidity/Route";
+      return;
+    }
+
+    receiveInput.value = result.estimate;
+  } catch (error) {
+    console.error("Quote fetching failed:", error);
+    receiveInput.value = "Error";
+  }
+}
+
+// trigger update estimate
+spendInput.oninput = updateEstimatedOutput;
+fromDropdown.onchange = updateEstimatedOutput;
+toDropdown.onchange = updateEstimatedOutput;
