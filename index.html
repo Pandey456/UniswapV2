@@ -8,46 +8,76 @@
     <title>Uniswap V2</title>
   </head>
   <body>
-    <button id="connect-btn">connect</button>
-    <div class="card">
-      <h3>Add Liquidity</h3>
-      <form id="addLiquidity_form">
-        <label for="Tkn1">Token-1 Address</label>
-        <input id="Tkn1" />
-        <label for="Qty1">Qty-1</label>
-        <input id="Qty1" />
-        <label for="Tkn2">Token-2 Address</label>
-        <input id="Tkn2" />
-        <label for="Qty2">Qty-2</label>
-        <input id="Qty2" />
-        <button type="submit" id="addLiquidity_btn">Add Liquidity</button>
-      </form>
-    </div>
-    <div class="card">
-      <h3>Swap</h3>
-      <form id="Swap-frm">
-        <label for="FromTkn">From</label>
-        <select id="FromTkn">
-          <option value="" disabled selected>
-            Connect Wallet to get token list
-          </option>
-        </select>
+    <!-- <button id="connect-btn">connect</button> -->
+    <nav class="navbar">
+      <div class="logo">0xSwap</div>
 
-        <label for="FrmQty">Spend</label>
-        <input type="number" step="any" id="FrmQty" placeholder="0.0" />
+      <div class="nav-links">
+        <a href="#">Home</a>
+        <a href="https://github.com/Pandey456/UniswapV2" target="_blank"
+          >Source Code</a
+        >
+      </div>
 
-        <label for="ToTkn">To</label>
-        <select id="ToTkn">
-          <option value="" disabled selected>
-            Connect Wallet to get token list
-          </option>
-        </select>
+      <button id="connect-btn">Connect</button>
+    </nav>
+    <div class="container">
+      <div class="card">
+        <h3>Add Liquidity</h3>
+        <form id="addLiquidity_form">
+          <label for="Tkn1">Token-1 Address</label>
+          <input id="Tkn1" />
+          <label for="Qty1">Qty-1</label>
+          <input id="Qty1" />
+          <label for="Tkn2">Token-2 Address</label>
+          <input id="Tkn2" />
+          <label for="Qty2">Qty-2</label>
+          <input id="Qty2" />
+          <button type="submit" id="addLiquidity_btn">Add Liquidity</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Swap</h3>
+        <form id="Swap-frm">
+          <label for="FromTkn">From</label>
+          <select id="FromTkn">
+            <option value="" disabled selected>
+              Connect Wallet to get token list
+            </option>
+          </select>
 
-        <label for="ToQty">Receive (Estimated)</label>
-        <input type="text" id="ToQty" placeholder="0.0" readonly />
+          <label for="FrmQty">Spend</label>
+          <input type="number" step="any" id="FrmQty" placeholder="0.0" />
 
-        <button type="submit" id="Swap_btn">Swap</button>
-      </form>
+          <label for="ToTkn">To</label>
+          <select id="ToTkn">
+            <option value="" disabled selected>
+              Connect Wallet to get token list
+            </option>
+          </select>
+
+          <label for="ToQty">Receive (Estimated)</label>
+          <input type="text" id="ToQty" placeholder="0.0" readonly />
+
+          <button type="submit" id="Swap_btn">Swap</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Remove Liquidity</h3>
+        <form id="removeLiquidity_form">
+          <label for="poolTkn">Pool Token</label>
+          <select id="poolTkn">
+            <option value="" disabled selected>
+              Connect Wallet to get Pool list
+            </option>
+          </select>
+          <label for="lpQty">Pool Token Amount</label>
+          <input id="lpQty" />
+          <button type="submit" id="removeLiquidity_btn">
+            Remove Liquidity
+          </button>
+        </form>
+      </div>
     </div>
   </body>
 </html>

@@ -37,6 +37,7 @@ let publicClient = createPublicClient({
 let allPairs = [];
 connectBTN.onclick = connect;
 addLiquidityBTN.onclick = addLiquidity;
+swapBTN.onclick = handleSwapSubmit;
 async function connect() {
   if (window.ethereum) {
     walletClient = createWalletClient({
@@ -314,3 +315,67 @@ async function updateEstimatedOutput() {
 spendInput.oninput = updateEstimatedOutput;
 fromDropdown.onchange = updateEstimatedOutput;
 toDropdown.onchange = updateEstimatedOutput;
+
+async function handleSwapSubmit(e) {
+  e.preventDefault();
+  const [account] = await walletClient.requestAddresses();
+  const amountIn = parseEther(spendInput.value);
+
+  // 1. Get the pre-calculated path and estimate
+  const result = await getRouteAndEstimate(
+    fromDropdown.value,
+    toDropdown.value,
+    spendInput.value,
+    allPairs,
+  );
+  const amountOutMin = calculateMinimumAmount(parseEther(result.estimate));
+
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + 1200); // 20 mins
+
+  //start here
+  swapBTN.innerText = "Approving...";
+  const allowance = await publicClient.readContract({
+    address: fromDropdown.value,
+    abi: erc20ABI,
+    functionName: "allowance",
+    args: [account, routerAddress],
+  });
+
+  if (allowance < amountIn) {
+    console.log("Allowance insufficient. Requesting approval...");
+    const { request: approveReq } = await publicClient.simulateContract({
+      address: fromDropdown.value,
+      abi: erc20ABI,
+      functionName: "approve",
+      args: [routerAddress, amountIn],
+      account,
+    });
+    const approveTx = await walletClient.writeContract({
+      ...approveReq,
+      chain: currentChain,
+    });
+    // Block code execution until the approval transaction is fully mined
+    await publicClient.waitForTransactionReceipt({ hash: approveTx });
+    console.log("Approval confirmed.");
+  }
+  swapBTN.innerText = "Confirming Swap...";
+
+  //end here
+
+  const { request } = await publicClient.simulateContract({
+    address: routerAddress,
+    abi: routerABI,
+    functionName: "swap",
+    args: [amountIn, amountOutMin, result.path, account, deadline],
+    account,
+  });
+  swapBTN.innerText = "Processing Trade...";
+  const tx = await walletClient.writeContract({
+    ...request,
+    chain: currentChain,
+  });
+  swapBTN.innerText = "Success!";
+  setTimeout(() => {
+    swapBTN.innerText = "Swap";
+  }, 3000);
+}

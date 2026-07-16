@@ -1,6 +1,17 @@
-/* Base Card Container */
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 20px;
+  flex-wrap: nowrap;
+  width: 95%;
+  max-width: 1200px;
+  margin: 40px auto;
+}
+
 .card {
-  width: 360px;
+  flex: 1 1 360px;
+  min-width: 250px;
   background-color: #ffffff;
   border-radius: 16px;
   box-shadow:
@@ -11,11 +22,13 @@
     system-ui,
     -apple-system,
     sans-serif;
-  margin: 20px auto; /* Centers the card on the screen */
   border: 1px solid #f3f4f6;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-/* Title Styling */
 .card h3 {
   margin: 0 0 20px 0;
   font-size: 1.35rem;
@@ -24,111 +37,29 @@
   text-align: center;
 }
 
-/* Form Layout */
 #addLiquidity_form,
-#Swap-frm {
+#Swap-frm,
+#removeLiquidity_form {
   display: flex;
   flex-direction: column;
-  gap: 14px; /* Even spacing between fields */
+  gap: 14px;
+  flex-grow: 1;
 }
 
-/* Input Labels */
-#addLiquidity_form,
-#Swap-frm label {
+#addLiquidity_form label,
+#Swap-frm label,
+#removeLiquidity_form label {
   font-size: 0.85rem;
   font-weight: 600;
   color: #4b5563;
-  margin-bottom: -6px; /* Pulls label closer to its input */
+  margin-bottom: -6px;
 }
 
-/* Input Fields */
-#addLiquidity_form,
-#Swap-frm input {
-  width: 100%;
-  padding: 10px 12px;
-  font-size: 0.95rem;
-  color: #1f2937;
-  background-color: #f9fafb;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  box-sizing: border-box; /* Crucial: Keeps padding from breaking width */
-  transition: all 0.2s ease;
-}
-
-/* Input Focus State */
-#addLiquidity_form,
-#Swap-frm input:focus {
-  outline: none;
-  border-color: #2563eb;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-}
-
-/* Action Button */
-#addLiquidity_btn,
-#Swap_btn {
-  width: 100%;
-  background-color: #2563eb;
-  color: #ffffff;
-  border: none;
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 8px;
-  transition:
-    background-color 0.2s ease,
-    transform 0.1s ease;
-}
-
-#addLiquidity_btn:hover,
-#Swap_btn:hover {
-  background-color: #1d4ed8;
-}
-
-#addLiquidity_btn:active,
-#Swap_btn:active {
-  transform: scale(0.98); /* Tactile press down animation */
-}
-/* Connect Wallet Button Style */
-#connect-btn {
-  background-color: #10b981; /* Web3 green for "active/online" */
-  color: #ffffff;
-  border: 1px solid #059669;
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-family:
-    system-ui,
-    -apple-system,
-    sans-serif;
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-transform: capitalize; /* Automatically handles "connect" vs "Connected" capitalization */
-  cursor: pointer;
-  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
-  transition: all 0.2s ease;
-}
-
-/* Hover State */
-#connect-btn:hover {
-  background-color: #059669;
-  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-}
-
-/* Active Click Effect */
-#connect-btn:active {
-  transform: scale(0.97);
-}
-
-/* Focus State (For keyboard accessibility) */
-#connect-btn:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
-}
 #addLiquidity_form input,
 #Swap-frm input,
-#Swap-frm select {
+#Swap-frm select,
+#removeLiquidity_form input,
+#removeLiquidity_form select {
   width: 100%;
   padding: 10px 12px;
   font-size: 0.95rem;
@@ -142,9 +73,107 @@
 
 #addLiquidity_form input:focus,
 #Swap-frm input:focus,
-#Swap-frm select:focus {
+#Swap-frm select:focus,
+#removeLiquidity_form input:focus,
+#removeLiquidity_form select:focus {
   outline: none;
   border-color: #2563eb;
   background-color: #ffffff;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+#addLiquidity_btn,
+#Swap_btn,
+#removeLiquidity_btn {
+  width: 100%;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: auto;
+  transition:
+    background-color 0.2s ease,
+    transform 0.1s ease;
+}
+
+#addLiquidity_btn:hover,
+#Swap_btn:hover,
+#removeLiquidity_btn:hover {
+  background-color: #1d4ed8;
+}
+
+#addLiquidity_btn:active,
+#Swap_btn:active,
+#removeLiquidity_btn:active {
+  transform: scale(0.98);
+}
+
+#connect-btn {
+  background-color: #10b981;
+  color: #ffffff;
+  border: 1px solid #059669;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+  transition: all 0.2s ease;
+  margin: 20px;
+}
+
+#connect-btn:hover {
+  background-color: #059669;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
+}
+
+#connect-btn:active {
+  transform: scale(0.97);
+}
+
+#connect-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.4);
+}
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 40px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+  font-family: system-ui, sans-serif;
+}
+
+.nav-links {
+  display: flex;
+  gap: 24px;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #4b5563;
+  font-weight: 600;
+  font-family: system-ui, sans-serif;
+  font-size: 0.95rem;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover {
+  color: #2563eb;
 }
