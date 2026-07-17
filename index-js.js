@@ -28,6 +28,11 @@ const toDropdown = document.getElementById("ToTkn");
 const spendInput = document.getElementById("FrmQty");
 const receiveInput = document.getElementById("ToQty");
 const swapBTN = document.getElementById("Swap_btn");
+//for remove liquidity
+const poolTkn = document.getElementById("poolTkn");
+const exp_display = document.getElementById("exp_display");
+const removeLiquidity_btn = document.getElementById("removeLiquidity_btn");
+const lpQty = document.getElementById("lpQty");
 
 let walletClient;
 let publicClient = createPublicClient({
@@ -38,6 +43,7 @@ let allPairs = [];
 connectBTN.onclick = connect;
 addLiquidityBTN.onclick = addLiquidity;
 swapBTN.onclick = handleSwapSubmit;
+removeLiquidity_btn.onclick = handleRemoveLiquidity;
 async function connect() {
   if (window.ethereum) {
     walletClient = createWalletClient({
@@ -46,6 +52,7 @@ async function connect() {
     await walletClient.requestAddresses();
     connectBTN.innerHTML = "Connected";
     await getAllTokens();
+    await populateUserLPPools();
   } else {
     connectBTN.innerHTML = "Install Metamask First";
   }
@@ -377,5 +384,192 @@ async function handleSwapSubmit(e) {
   swapBTN.innerText = "Success!";
   setTimeout(() => {
     swapBTN.innerText = "Swap";
+  }, 3000);
+}
+
+async function populateUserLPPools() {
+  walletClient = createWalletClient({
+    transport: custom(window.ethereum),
+  });
+
+  const [account] = await walletClient.requestAddresses();
+
+  //Get the total number of pools deployed by your factory
+  const poolLength = await publicClient.readContract({
+    address: factoryAddress,
+    abi: factoryABI,
+    functionName: "getPoolLength",
+  });
+
+  // Clear previous list options
+  poolTkn.innerHTML =
+    '<option value="" disabled selected>Select an LP Position</option>';
+  let activePositionsCount = 0;
+
+  // Loop through all tracked pairs
+  for (let i = 0n; i < poolLength; i++) {
+    const poolAddress = await publicClient.readContract({
+      address: factoryAddress,
+      abi: factoryABI,
+      functionName: "allPool",
+      args: [i],
+    });
+
+    // Check if the logged-in wallet holds any LP tokens for this address
+    const lpBalance = await publicClient.readContract({
+      address: poolAddress,
+      abi: erc20ABI,
+      functionName: "balanceOf",
+      args: [account],
+    });
+
+    // If they own shares, fetch underlying token details to show a readable label
+    if (lpBalance > 0n) {
+      activePositionsCount++;
+
+      const token0Address = await publicClient.readContract({
+        address: poolAddress,
+        abi: poolABI,
+        functionName: "token0",
+      });
+      const token1Address = await publicClient.readContract({
+        address: poolAddress,
+        abi: poolABI,
+        functionName: "token1",
+      });
+
+      const symbol0 = await publicClient.readContract({
+        address: token0Address,
+        abi: erc20ABI,
+        functionName: "symbol",
+      });
+      const symbol1 = await publicClient.readContract({
+        address: token1Address,
+        abi: erc20ABI,
+        functionName: "symbol",
+      });
+
+      const formattedBalance = formatEther(lpBalance);
+
+      //Append to dropdown with unique data tags for removal parsing
+      const optionHTML = `
+        <option value="${poolAddress}" data-tkn0="${token0Address}" data-tkn1="${token1Address}">
+          ${symbol0} / ${symbol1} (${parseFloat(formattedBalance).toFixed(4)} LP)
+        </option>
+      `;
+      poolTkn.insertAdjacentHTML("beforeend", optionHTML);
+    }
+  }
+
+  if (activePositionsCount === 0) {
+    poolDropdown.innerHTML =
+      '<option value="" disabled selected>No LP positions found in this wallet</option>';
+  }
+}
+
+async function getMinAmount(poolAddress, lpTknAmount) {
+  const lpAmount = BigInt(lpTknAmount);
+  walletClient = createWalletClient({
+    transport: custom(window.ethereum),
+  });
+  const totalLPSupply = await publicClient.readContract({
+    address: poolAddress,
+    abi: poolABI,
+    functionName: "totalSupply",
+  });
+  const reserve0 = await publicClient.readContract({
+    address: poolAddress,
+    abi: poolABI,
+    functionName: "qtyToken0",
+  });
+  const reserve1 = await publicClient.readContract({
+    address: poolAddress,
+    abi: poolABI,
+    functionName: "qtyToken1",
+  });
+  if (totalLPSupply === 0n) {
+    exp_display.innerHTML = `<p>Token 1: 0.0 <br> Token 2: 0.0</p>`;
+    return { qtyAmount0Min: 0n, qtyAmount1Min: 0n };
+  }
+  const expectedAmount0 = (lpAmount * reserve0) / totalLPSupply;
+  const expectedAmount1 = (lpAmount * reserve1) / totalLPSupply;
+  console.log(expectedAmount0, expectedAmount1);
+
+  const cleanToken1 = formatEther(expectedAmount0);
+  const cleanToken2 = formatEther(expectedAmount1);
+
+  exp_display.innerHTML = `
+  <p>
+    Token 1: ${cleanToken1}<br>
+    Token 2: ${cleanToken2}
+  </p>
+`;
+  const qtyAmount0Min = (expectedAmount0 * 97n) / 100n;
+  const qtyAmount1Min = (expectedAmount1 * 97n) / 100n;
+  return { qtyAmount0Min, qtyAmount1Min };
+}
+
+async function handleRemoveLiquidity(e) {
+  e.preventDefault();
+  if (!window.ethereum) return alert("Provider not found");
+
+  walletClient = createWalletClient({
+    transport: custom(window.ethereum),
+  });
+
+  const LPtokenQty = parseEther(lpQty.value);
+  const LPtokenAddress = poolTkn.value;
+  const [account] = await walletClient.requestAddresses();
+
+  const { qtyAmount0Min, qtyAmount1Min } = await getMinAmount(
+    LPtokenAddress,
+    LPtokenQty,
+  );
+
+  removeLiquidity_btn.innerText = "Approving...";
+  const allowance = await publicClient.readContract({
+    address: LPtokenAddress,
+    abi: erc20ABI,
+    functionName: "allowance",
+    args: [account, routerAddress],
+  });
+
+  if (allowance < LPtokenQty) {
+    console.log("Allowance insufficient. Requesting approval...");
+    const { request: approveReq } = await publicClient.simulateContract({
+      address: LPtokenAddress,
+      abi: erc20ABI,
+      functionName: "approve",
+      args: [routerAddress, LPtokenQty],
+      account,
+    });
+    const approveTx = await walletClient.writeContract({
+      ...approveReq,
+      chain: currentChain,
+    });
+    await publicClient.waitForTransactionReceipt({ hash: approveTx });
+    console.log("Approval confirmed.");
+  }
+
+  removeLiquidity_btn.innerText = "Processing Trade...";
+
+  const { request } = await publicClient.simulateContract({
+    address: routerAddress,
+    abi: routerABI,
+    functionName: "removeLiquidity",
+    args: [LPtokenQty, LPtokenAddress, account, qtyAmount0Min, qtyAmount1Min],
+    account,
+  });
+
+  const tx = await walletClient.writeContract({
+    ...request,
+    chain: currentChain,
+  });
+
+  await publicClient.waitForTransactionReceipt({ hash: tx });
+
+  removeLiquidity_btn.innerText = "Success!";
+  setTimeout(() => {
+    removeLiquidity_btn.innerText = "Remove Liquidity";
   }, 3000);
 }
