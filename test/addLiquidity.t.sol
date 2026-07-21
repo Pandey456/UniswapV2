@@ -30,9 +30,9 @@ contract addLiquidity is Test {
 
         //the the hidden getter function for ' pool public Pool;'
         Pool = DeployPool.Pool();
-        address owner = Pool.i_FactoryAdddress();
+        address owner = Pool.i_FactoryAddress();
         vm.prank(owner);
-        Pool.initizalized(address(MockToken0), address(MockToken1));
+        Pool.initizalize(address(MockToken0), address(MockToken1));
     }
 
     function testCretePool() public view {
@@ -64,18 +64,18 @@ contract addLiquidity is Test {
     function testNullTokenPool() public {
         //vm.expectRevert("Zero Address");
         pool Pool1 = new pool();
-        address owner = Pool1.i_FactoryAdddress();
+        address owner = Pool1.i_FactoryAddress();
         vm.prank(owner);
         vm.expectRevert("Zero Address");
-        Pool1.initizalized(address(MockToken1), address(0));
+        Pool1.initizalize(address(MockToken1), address(0));
     }
 
     function testSameToken() public {
         pool Pool1 = new pool();
-        address owner = Pool1.i_FactoryAdddress();
+        address owner = Pool1.i_FactoryAddress();
         vm.prank(owner);
         vm.expectRevert("Same Token");
-        Pool1.initizalized(address(MockToken1), address(MockToken1));
+        Pool1.initizalize(address(MockToken1), address(MockToken1));
     }
 
     function testAddLiquidity() public {
@@ -173,27 +173,27 @@ contract addLiquidity is Test {
         pool Pool1 = new pool();
         vm.prank(mockFactory);
         vm.expectRevert("Not a Owner");
-        Pool1.initizalized(address(MockToken1), address(MockToken0));
+        Pool1.initizalize(address(MockToken1), address(MockToken0));
     }
 
     function testAlreadyInitialized() public {
         pool Pool1 = new pool();
-        Pool1.initizalized(address(MockToken1), address(MockToken0));
-        vm.expectRevert("Already initizalized");
-        Pool1.initizalized(address(MockToken0), address(MockToken1));
+        Pool1.initizalize(address(MockToken1), address(MockToken0));
+        vm.expectRevert("Already initizalize");
+        Pool1.initizalize(address(MockToken0), address(MockToken1));
     }
 
     function testInitializedZeroAddress() public {
         pool Pool1 = new pool();
 
         vm.expectRevert("Zero Address");
-        Pool1.initizalized(address(0), address(MockToken1));
+        Pool1.initizalize(address(0), address(MockToken1));
     }
 
     function testInitializedSameAddress() public {
         pool Pool1 = new pool();
 
         vm.expectRevert("Same Token");
-        Pool1.initizalized(address(MockToken1), address(MockToken1));
+        Pool1.initizalize(address(MockToken1), address(MockToken1));
     }
 }

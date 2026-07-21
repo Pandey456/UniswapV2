@@ -37,7 +37,7 @@ contract pool is ERC20, ReentrancyGuard {
     uint256 public qtyToken0; //X
     uint256 public qtyToken1; //Y
     bool internal isInitialized;
-    address public immutable i_FactoryAdddress;
+    address public immutable i_FactoryAddress;
 
     /* Events */
     event Mint(
@@ -61,12 +61,12 @@ contract pool is ERC20, ReentrancyGuard {
 
     /*constructor */
     constructor() ERC20("LP_Token", "LPTKN") {
-        i_FactoryAdddress = msg.sender;
+        i_FactoryAddress = msg.sender;
     }
 
     /* Functions*/
-    function initizalized(address _token0, address _token1) external {
-        require(msg.sender == i_FactoryAdddress, "Not a Owner");
+    function initizalize(address _token0, address _token1) external {
+        require(msg.sender == i_FactoryAddress, "Not Factory");
         require(!isInitialized, "Already initizalized");
         require(_token0 != address(0) && _token1 != address(0), "Zero Address");
         require(_token0 != _token1, "Same Token");
@@ -82,6 +82,12 @@ contract pool is ERC20, ReentrancyGuard {
     ) public nonReentrant {
         //Check
         require(_qtyToken0 > 0 && _qtyToken1 > 0, "Zero Amounts");
+        // verify new token arrived
+        uint256 balance0 = IERC20(token0).balanceOf(address(this));
+        uint256 balance1 = IERC20(token1).balanceOf(address(this));
+        require(balance0 - qtyToken0 >= _qtyToken0, "TOken0 not Received");
+        require(balance1 - qtyToken1 >= _qtyToken1, "TOken1 not Received");
+
         //get the number of LP token to be minted
         bool firstLp = (totalSupply() == 0);
         uint256 _LpTokenToMint = mintLpToken(_qtyToken0, _qtyToken1, firstLp);
@@ -97,7 +103,6 @@ contract pool is ERC20, ReentrancyGuard {
         }
 
         _mint(_user, _LpTokenToMint);
-        
 
         emit Mint(_user, _qtyToken0, _qtyToken1, _LpTokenToMint);
     }
@@ -143,6 +148,10 @@ contract pool is ERC20, ReentrancyGuard {
         uint256 inTokenAmt = isToken0 ? qtyToken0 : qtyToken1; //X
         // Δy = _tokenAmtOut
         // Δx = _tokenAmtIn
+        //verify if the token arrived
+        uint256 actualBalanceIn = IERC20(_tokenIn).balanceOf(address(this));
+        uint256 actualAmountIn = actualBalanceIn - inTokenAmt;
+        require(actualAmountIn >= _tokenAmtIn, "Token Not Received");
 
         /* fee = 0.3% --> Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)*/
         //qtyToken0=x
@@ -152,10 +161,10 @@ contract pool is ERC20, ReentrancyGuard {
 
         require(_tokenAmtOut >= _minAmtOut, "Slippage wiped");
         if (isToken0) {
-            qtyToken0 += _tokenAmtIn;
+            qtyToken0 += actualAmountIn;
             qtyToken1 -= _tokenAmtOut;
         } else {
-            qtyToken1 += _tokenAmtIn;
+            qtyToken1 += actualAmountIn;
             qtyToken0 -= _tokenAmtOut;
         }
 
@@ -163,14 +172,6 @@ contract pool is ERC20, ReentrancyGuard {
 
         //transfer
 
-        // require(
-        //     IERC20(_tokenIn).transferFrom(
-        //         msg.sender,
-        //         address(this),
-        //         _tokenAmtIn
-        //     ),
-        //     "In Transfer Failed"
-        // );
         require(
             IERC20(_tokenOut).transfer(_user, _tokenAmtOut),
             "Out Transfer Failed"

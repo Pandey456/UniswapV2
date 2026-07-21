@@ -38,9 +38,9 @@ contract swap is Test {
 
         //the the hidden getter function for ' pool public Pool;'
         Pool = DeployPool.Pool();
-        address owner = Pool.i_FactoryAdddress();
+        address owner = Pool.i_FactoryAddress();
         vm.prank(owner);
-        Pool.initizalized(address(MockToken0), address(MockToken1));
+        Pool.initizalize(address(MockToken0), address(MockToken1));
 
         MockToken0.approve(address(Pool), 10000);
         MockToken1.approve(address(Pool), 10000);
@@ -50,9 +50,9 @@ contract swap is Test {
     //Swap Function tests
     function testForNoLiquidity() public {
         pool Pool1 = new pool();
-        address owner = Pool1.i_FactoryAdddress();
+        address owner = Pool1.i_FactoryAddress();
         vm.prank(owner);
-        Pool1.initizalized(address(MockToken0), address(MockToken1));
+        Pool1.initizalize(address(MockToken0), address(MockToken1));
         vm.expectRevert("Insufficient Liquidity");
         Pool1.swap(32, address(MockToken0), 2, address(this));
     }

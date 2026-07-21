@@ -160,7 +160,7 @@ contract Router is ReentrancyGuard {
 
     function removeLiquidity(
         uint256 _lpTokenQty,
-        address poolAddress, // this ntg but token address
+        address poolAddress,
         address _user,
         uint256 _qtyAmount0Min,
         uint256 _qtyAmount1Min

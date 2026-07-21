@@ -33,9 +33,9 @@ contract removeLiquidity is Test {
 
         //the the hidden getter function for ' pool public Pool;'
         Pool = DeployPool.Pool();
-        address owner = Pool.i_FactoryAdddress();
+        address owner = Pool.i_FactoryAddress();
         vm.prank(owner);
-        Pool.initizalized(address(MockToken0), address(MockToken1));
+        Pool.initizalize(address(MockToken0), address(MockToken1));
 
         // MockToken0.approve(address(Pool), 10000);
         // MockToken1.approve(address(Pool), 10000);
@@ -52,9 +52,9 @@ contract removeLiquidity is Test {
 
     function testNoLiquidity() public {
         pool Pool1 = new pool();
-        address owner = Pool1.i_FactoryAdddress();
+        address owner = Pool1.i_FactoryAddress();
         vm.prank(owner);
-        Pool1.initizalized(address(MockToken0), address(MockToken1));
+        Pool1.initizalize(address(MockToken0), address(MockToken1));
 
         vm.expectRevert("Insufficient Liquidity");
         Pool1.removeLiquidity(10, address(this));
@@ -66,9 +66,9 @@ contract removeLiquidity is Test {
         Pool.addLiquidity(1000, 1000, address(this));*/
     function testNoAmount() public {
         pool Pool1 = new pool();
-        address owner = Pool1.i_FactoryAdddress();
+        address owner = Pool1.i_FactoryAddress();
         vm.prank(owner);
-        Pool1.initizalized(address(MockToken0), address(MockToken1));
+        Pool1.initizalize(address(MockToken0), address(MockToken1));
         MockToken0.approve(address(Pool1), 10000);
         MockToken1.approve(address(Pool1), 1000001);
         Pool1.addLiquidity(1005, 1000000, address(this));
