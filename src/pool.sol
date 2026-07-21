@@ -155,7 +155,7 @@ contract pool is ERC20, ReentrancyGuard {
 
         /* fee = 0.3% --> Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)*/
         //qtyToken0=x
-        uint256 _tokenAmtOut = (outTokenAmt * _tokenAmtIn * 997) /
+        uint256 _tokenAmtOut = (outTokenAmt * actualAmountIn * 997) /
             (inTokenAmt * 1000 + actualAmountIn * 997);
         require(_tokenAmtOut > 0, "Insufficient output");
 
