@@ -176,8 +176,8 @@ FN:63,pool.constructor
 FNDA:63,pool.constructor
 DA:64,63
 DA:68,64
-FN:68,pool.initizalized
-FNDA:64,pool.initizalized
+FN:68,pool.initialized
+FNDA:64,pool.initialized
 DA:69,64
 BRDA:69,0,0,1
 BRDA:69,0,1,63

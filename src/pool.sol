@@ -65,9 +65,9 @@ contract pool is ERC20, ReentrancyGuard {
     }
 
     /* Functions*/
-    function initizalize(address _token0, address _token1) external {
+    function initialize(address _token0, address _token1) external {
         require(msg.sender == i_FactoryAddress, "Not Factory");
-        require(!isInitialized, "Already initizalized");
+        require(!isInitialized, "Already initialized");
         require(_token0 != address(0) && _token1 != address(0), "Zero Address");
         require(_token0 != _token1, "Same Token");
         isInitialized = true;

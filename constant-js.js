@@ -476,7 +476,7 @@ export const poolABI = [
   },
   {
     type: "function",
-    name: "initizalized",
+    name: "initialized",
     inputs: [
       {
         name: "_token0",

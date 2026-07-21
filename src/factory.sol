@@ -36,7 +36,7 @@ contract factory {
         poolRegistry[token0][token1] = newPool;
         poolRegistry[token1][token0] = newPool;
         allPool.push(newPool);
-        Pool.initizalize(token0, token1); // moved it down to satisfy check - effects - interactions
+        Pool.initialize(token0, token1); // moved it down to satisfy check - effects - interactions
         emit PoolCreated(token0, token1, newPool, allPool.length);
         return newPool;
     }

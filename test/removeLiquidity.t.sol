@@ -35,7 +35,7 @@ contract removeLiquidity is Test {
         Pool = DeployPool.Pool();
         address owner = Pool.i_FactoryAddress();
         vm.prank(owner);
-        Pool.initizalize(address(MockToken0), address(MockToken1));
+        Pool.initialize(address(MockToken0), address(MockToken1));
 
         // MockToken0.approve(address(Pool), 10000);
         // MockToken1.approve(address(Pool), 10000);
@@ -54,7 +54,7 @@ contract removeLiquidity is Test {
         pool Pool1 = new pool();
         address owner = Pool1.i_FactoryAddress();
         vm.prank(owner);
-        Pool1.initizalize(address(MockToken0), address(MockToken1));
+        Pool1.initialize(address(MockToken0), address(MockToken1));
 
         vm.expectRevert("Insufficient Liquidity");
         Pool1.removeLiquidity(10, address(this));
@@ -68,7 +68,7 @@ contract removeLiquidity is Test {
         pool Pool1 = new pool();
         address owner = Pool1.i_FactoryAddress();
         vm.prank(owner);
-        Pool1.initizalize(address(MockToken0), address(MockToken1));
+        Pool1.initialize(address(MockToken0), address(MockToken1));
         MockToken0.approve(address(Pool1), 10000);
         MockToken1.approve(address(Pool1), 1000001);
         Pool1.addLiquidity(1005, 1000000, address(this));
