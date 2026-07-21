@@ -194,8 +194,8 @@ Static analysis: Slither runs clean on Pool + Factory (naming convention warning
 |---|---|
 | Factory | `<add factory address>` |
 | Router | `<add router address>` |
-| Test Token A | `<add token A address>` |
-| Test Token B | `<add token B address>` |
+| Test Token A | `0xa9d479f9685660b02a32b44c768aa6e1b35fb156` |
+| Test Token B | `0xf64c595579fde59a8a26c502bf492de9650d6d1d` |
 
 Pool contracts are deployed on demand by the Factory. Each pair gets its own Pool at a deterministic CREATE2 address — computable off-chain from the pair.
 
