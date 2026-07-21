@@ -462,7 +462,7 @@ async function populateUserLPPools() {
   }
 
   if (activePositionsCount === 0) {
-    poolDropdown.innerHTML =
+    poolTkn.innerHTML =
       '<option value="" disabled selected>No LP positions found in this wallet</option>';
   }
 }

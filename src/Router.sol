@@ -79,7 +79,12 @@ contract Router is ReentrancyGuard {
         IERC20(_tokenA).safeTransferFrom(msg.sender, poolAddress, amountAUsed);
         IERC20(_tokenB).safeTransferFrom(msg.sender, poolAddress, amountBUsed);
 
-        pool(poolAddress).addLiquidity(amountAUsed, amountBUsed, _to);
+        (address token0, ) = sortToken(_tokenA, _tokenB);
+        (uint256 amount0, uint256 amount1) = _tokenA == token0
+            ? (amountAUsed, amountBUsed)
+            : (amountBUsed, amountAUsed);
+
+        pool(poolAddress).addLiquidity(amount0, amount1, _to);
 
         emit LiquidityAdded(poolAddress, _to, amountAUsed, amountBUsed);
     }

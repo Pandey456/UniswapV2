@@ -33,14 +33,15 @@ _Coming soon:_ same URL will point to a low-gas EVM L2 deployment (Base / Polygo
       User-facing convenience layer. Multi-hop swaps, optimal ratio matching for addLiquidity, slippage protection, deadline checks. Pre-pushes tokens to pools (V2-style optimistic transfers).
 - [x] **Phase 4 — Frontend** ([swap.adarshpandey.xyz](https://swap.adarshpandey.xyz))
       viem + wagmi + Vite. Direct contract interaction, no server layer.
-- [ ] **Phase 5 — L2 mainnet deployment**
-      Redeploy to a low-gas EVM chain. Same frontend URL will re-point to mainnet addresses; Sepolia stays as a testing environment.
+- [x] **Phase 5 — L2 mainnet deployment**
+      Redeploy to a Polygon. Same frontend URL will re-point to mainnet addresses; Sepolia stays as a testing environment.
 
 ---
 
 ## Architecture
 
 V2's three-contract design:
+
 ```
 User wallet
              |
@@ -62,6 +63,7 @@ User wallet
     |   x · y = k     |   IS the LP token (inherits ERC20)
     +-----------------+
 ```
+
 Three contracts, three jobs:
 
 ### Pool
@@ -107,9 +109,11 @@ Multi-hop pattern: for a path `[A, B, C]`, Router pre-pushes A to the A/B pool, 
 Four formulas. Everything else is bookkeeping.
 
 ### Constant product invariant
+
 ```
 x · y = k
 ```
+
 - `x` = reserve of token0
 - `y` = reserve of token1
 - `k` = the product, which must never decrease (grows slightly with each fee-bearing swap — that's how LPs earn)
@@ -117,33 +121,41 @@ x · y = k
 ### LP token minting
 
 **First liquidity provider** (pool is empty):
+
 ```
 shares = sqrt(Δx · Δy) - MINIMUM_LIQUIDITY
 ```
+
 Geometric mean of the two deposits, minus 1000 tokens permanently locked at `address(1)` to prevent the first-LP inflation attack.
 
 **Subsequent liquidity providers:**
+
 ```
 shares = min(
 (Δx · totalSupply) / reserveX,
 (Δy · totalSupply) / reserveY
 )
 ```
+
 The `min(...)` forces honest ratio matching. Off-ratio excess donates to existing LPs.
 
 ### Swap output
 
 With 0.3% LP fee (V2 form, integer math):
+
 ```
 Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)
 ```
+
 The 0.3% fee stays in the pool. It grows `k`, silently increasing per-share value.
 
 ### Liquidity removal (proportional)
+
 ```
 amount0 = (shares · reserve0) / totalSupply
 amount1 = (shares · reserve1) / totalSupply
 ```
+
 Burn shares, send proportional slice of each reserve.
 
 ### Slippage protection
@@ -170,17 +182,17 @@ Choices made during implementation that diverge from a straight V2 clone:
 
 Attacks defended against and how:
 
-| Attack | Defense | Status |
-|---|---|---|
-| Reentrancy on all external functions | `ReentrancyGuard.nonReentrant` on Pool.addLiquidity / swap / removeLiquidity | ✅ Implemented |
-| First-LP inflation attack | `MINIMUM_LIQUIDITY = 1000` permanently minted to `address(1)` on first liquidity | ✅ Implemented |
-| Direct Pool exploitation (bypassing Router) | Balance-check pattern — Pool verifies token arrival via `balanceOf` | ✅ Implemented |
-| Integer division precision | Multiply before divide, throughout | ✅ Enforced |
-| Slippage / sandwich attacks | `minAmountOut` on swap; aggregated at Router level for multi-hop | ✅ Implemented |
-| Duplicate pool creation | Factory checks `poolRegistry` before deploying; blocks duplicates | ✅ Implemented |
-| Initialize front-running | `initialize` gated by `msg.sender == i_FactoryAddress` and one-shot `isInitialized` flag | ✅ Implemented |
-| Fee-on-transfer tokens | Not supported | ⚠️ Known limitation |
-| Donation attacks (raw transfers) | No `sync()`/`skim()`; donations become dust | ⚠️ Known limitation |
+| Attack                                      | Defense                                                                                  | Status              |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------- |
+| Reentrancy on all external functions        | `ReentrancyGuard.nonReentrant` on Pool.addLiquidity / swap / removeLiquidity             | ✅ Implemented      |
+| First-LP inflation attack                   | `MINIMUM_LIQUIDITY = 1000` permanently minted to `address(1)` on first liquidity         | ✅ Implemented      |
+| Direct Pool exploitation (bypassing Router) | Balance-check pattern — Pool verifies token arrival via `balanceOf`                      | ✅ Implemented      |
+| Integer division precision                  | Multiply before divide, throughout                                                       | ✅ Enforced         |
+| Slippage / sandwich attacks                 | `minAmountOut` on swap; aggregated at Router level for multi-hop                         | ✅ Implemented      |
+| Duplicate pool creation                     | Factory checks `poolRegistry` before deploying; blocks duplicates                        | ✅ Implemented      |
+| Initialize front-running                    | `initialize` gated by `msg.sender == i_FactoryAddress` and one-shot `isInitialized` flag | ✅ Implemented      |
+| Fee-on-transfer tokens                      | Not supported                                                                            | ⚠️ Known limitation |
+| Donation attacks (raw transfers)            | No `sync()`/`skim()`; donations become dust                                              | ⚠️ Known limitation |
 
 Static analysis: Slither runs clean on Pool + Factory (naming convention warnings only).
 
@@ -190,10 +202,10 @@ Static analysis: Slither runs clean on Pool + Factory (naming convention warning
 
 ### Current — Sepolia testnet (v1 live)
 
-| Contract | Address |
-|---|---|
-| Factory | `<add factory address>` |
-| Router | `<add router address>` |
+| Contract     | Address                                      |
+| ------------ | -------------------------------------------- |
+| Factory      | `0xae1cf56E2Df39E4EE9203DcEd781C75799E36202` |
+| Router       | `0x1163318B8A7a3c1454e4a6D7103646C91948E0ce` |
 | Test Token A | `0xa9d479f9685660b02a32b44c768aa6e1b35fb156` |
 | Test Token B | `0xf64c595579fde59a8a26c502bf492de9650d6d1d` |
 

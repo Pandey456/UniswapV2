@@ -1,5 +1,10 @@
-export const routerAddress = "0xcd120072e53a337df9b018c9c77a9032232bc716";
-export const factoryAddress = "0xe072286f025daba307478c279d299ee3046a289e";
+// These are sepolia Address
+// export const routerAddress = "0xB12f15c79bb456A24762Fe934F94C39b0E1D3dA7";
+// export const factoryAddress = "0x4D3dF6C45b39e852048d3F86eaa2941715F326dE";
+
+export const routerAddress = "0x1163318B8A7a3c1454e4a6D7103646C91948E0ce";
+export const factoryAddress = "0xae1cf56E2Df39E4EE9203DcEd781C75799E36202";
+
 export const factoryABI = [
   {
     type: "function",
