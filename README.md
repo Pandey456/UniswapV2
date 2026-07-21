@@ -3,85 +3,108 @@
 Building a Uniswap V2–style AMM in Solidity + Foundry. This is a learning project — I'm working through the V2 architecture by implementing it from first principles, one contract at a time.
 
 ---
-**Status:** Phase 2 in progress. Pool + Test Completed.
+
+**Status:** v1 complete. Live on Sepolia. Three contracts deployed and verified, wired to a working frontend.
+
+## 🔥 Try it live
+
+**[swap.adarshpandey.xyz](https://swap.adarshpandey.xyz)** — connect a wallet on Sepolia testnet and:
+
+- Create a new liquidity pool for any token pair
+- Add or remove liquidity
+- Swap tokens (single-hop and multi-hop)
+
+Frontend built with **viem** + wagmi + RainbowKit. Talks directly to the deployed contracts — no backend, no proxy. All routing logic lives in the Router contract.
+
+_Coming soon:_ same URL will point to a low-gas EVM L2 deployment (Base / Polygon / Arbitrum — decision pending). Sepolia stays available for testing.
 
 ---
 
 ## Build roadmap
 
-Built in phases. Each phase ships independently before moving to the next.
-
-- [x] **Phase 0 — ERC-20 tokens** (deployed to Sepolia)
-      Token A and Token B as the base pair.
+- [x] **Phase 0 — ERC-20 tokens** (Sepolia)
+      Token A and Token B as the base pair for the AMM.
       → [Pandey456/ERC-20_Token](https://github.com/Pandey456/ERC-20_Token)
-- [X] **Phase 1 — Pool contract** (current focus)
-      The actual AMM. One pool, two tokens. `addLiquidity`, `removeLiquidity`, `swap`.
-- [ ] **Phase 2 — Factory contract**
-      Deploys new Pools, prevents duplicates, maintains a registry of all pairs.
-- [ ] **Phase 3 — Router contract**
-      Multi-hop swaps and the user-convenience layer (slippage tolerance, deadlines, ratio matching).
-      
-Not building all three at once on purpose. The Pool is the hard part; the Factory and Router are orchestration layers that only make sense once a working Pool exists.
+- [x] **Phase 1 — Pool contract**
+      The AMM core. Inherits ERC20 (LP token IS the Pool). Balance-check pattern for token verification. MINIMUM_LIQUIDITY lock. ReentrancyGuard on all external functions.
+- [x] **Phase 2 — Factory contract**
+      Deploys new Pools via CREATE2 with the initialize pattern — addresses are computable off-chain without touching the chain.
+- [x] **Phase 3 — Router contract**
+      User-facing convenience layer. Multi-hop swaps, optimal ratio matching for addLiquidity, slippage protection, deadline checks. Pre-pushes tokens to pools (V2-style optimistic transfers).
+- [x] **Phase 4 — Frontend** ([swap.adarshpandey.xyz](https://swap.adarshpandey.xyz))
+      viem + wagmi + Vite. Direct contract interaction, no server layer.
+- [ ] **Phase 5 — L2 mainnet deployment**
+      Redeploy to a low-gas EVM chain. Same frontend URL will re-point to mainnet addresses; Sepolia stays as a testing environment.
 
 ---
 
 ## Architecture
 
 V2's three-contract design:
-
 ```
-            User wallet
-                 |
-                 v
-        +-----------------+
-        |     Router      |   user-facing convenience layer
-        +--------+--------+
-                 |
-                 |  asks: "where's the pool for token0/token1?"
-                 v
-        +-----------------+
-        |     Factory     |   registry + deploys new Pools
-        +--------+--------+
-                 |
-                 |  returns pool address (or creates one)
-                 v
-        +-----------------+
-        |  Pool (the AMM) |   holds reserves, executes swaps,
-        |   x · y = k     |   mints/burns LP tokens
-        +-----------------+
+User wallet
+             |
+             v
+    +-----------------+
+    |     Router      |   user-facing convenience layer
+    +--------+--------+
+             |
+             |  computes pool address off-chain via CREATE2 formula
+             v
+    +-----------------+
+    |     Factory     |   deploys new Pools, registers them
+    +--------+--------+
+             |
+             |  returns pool address (or creates one)
+             v
+    +-----------------+
+    |  Pool (the AMM) |   holds reserves, executes swaps,
+    |   x · y = k     |   IS the LP token (inherits ERC20)
+    +-----------------+
 ```
-
 Three contracts, three jobs:
 
 ### Pool
-Where everything actually happens. Holds reserves of two tokens, enforces `x · y = k`, and mints LP tokens when liquidity is added (burns them on withdrawal). The Pool *is* the ERC-20 contract for its own LP token.
+
+Where everything actually happens. Holds reserves of two tokens, enforces `x · y = k`, mints LP tokens on liquidity add. **The Pool contract itself IS the ERC-20 LP token** — no separate LP contract to keep in sync.
+
+Uses the **balance-check pattern**: doesn't trust caller-provided amounts. Reads `balanceOf(this)` to detect what actually arrived. Router pre-pushes tokens before calling swap/addLiquidity; Pool verifies the arrival.
 
 Three functions:
+
 - `addLiquidity` — deposit both tokens, get LP tokens back
-- `removeLiquidity` — burn LP tokens, get a proportional slice of the reserves
+- `removeLiquidity` — burn LP tokens, get proportional reserves back
 - `swap` — trade one token for the other
 
 ### Factory
-Just a registry + deployer. Two responsibilities:
-- Deploy new Pool contracts (one per token pair) using `CREATE2` so addresses are deterministic from the token pair
-- Maintain `getPool[tokenA][tokenB] → poolAddress` so anyone can look up the canonical Pool
 
-The Factory doesn't handle liquidity or swaps directly — it's only consulted to find a pool or create one.
+Deploys new Pools using **CREATE2 with the initialize pattern**:
+
+- Pool has a zero-argument constructor, so its `creationCode` is constant
+- Factory deploys via `new pool{salt: keccak256(token0, token1)}()`
+- Then calls `pool.initialize(token0, token1)` to set the tokens
+
+Result: pool addresses are derivable purely from the token pair, off-chain. Router uses this to skip Factory lookups on every swap.
+
+Bidirectional registration in `poolRegistry[tokenA][tokenB]` so lookups work in either order.
 
 ### Router
-User-facing, stateless, holds no assets. Handles:
-- Single and multi-hop swaps (A → B → C across multiple pools)
-- Slippage protection and deadline checks
-- Calculating optimal deposit ratios so LPs don't accidentally donate to existing LPs
-- Looking up pool addresses via the Factory
 
-Multi-hop isn't anything fancy — the Router just calls `swap()` on multiple Pools in sequence, feeding the output of one into the next.
+User-facing, stateless, holds no assets. Handles:
+
+- Single-hop and multi-hop swaps
+- Ratio matching for `addLiquidity` — if user provides off-ratio amounts, Router computes the optimal subset that matches current pool reserves
+- Slippage protection at the aggregate output level
+- Deadline enforcement
+- **Off-chain pool address computation** — Router caches Pool's bytecode hash at construction and derives pool addresses via the CREATE2 formula, no on-chain lookups per swap
+
+Multi-hop pattern: for a path `[A, B, C]`, Router pre-pushes A to the A/B pool, executes swap A→B with output going directly to the B/C pool, then executes swap B→C with output going to the user. Tokens flow through pools without touching Router's balance.
 
 ---
 
 ## The math
 
-The whole AMM has exactly four formulas. Everything else is bookkeeping.
+Four formulas. Everything else is bookkeeping.
 
 ### Constant product invariant
 ```
@@ -89,82 +112,114 @@ x · y = k
 ```
 - `x` = reserve of token0
 - `y` = reserve of token1
-- `k` = the product, which must never decrease (and grows slightly with each fee-bearing swap)
+- `k` = the product, which must never decrease (grows slightly with each fee-bearing swap — that's how LPs earn)
 
 ### LP token minting
 
 **First liquidity provider** (pool is empty):
 ```
-shares = sqrt(Δx · Δy)
+shares = sqrt(Δx · Δy) - MINIMUM_LIQUIDITY
 ```
-Geometric mean of the two deposits. This is what makes per-share value scale linearly with pool size.
+Geometric mean of the two deposits, minus 1000 tokens permanently locked at `address(1)` to prevent the first-LP inflation attack.
 
 **Subsequent liquidity providers:**
 ```
 shares = min(
-    (Δx · totalSupply) / reserveX,
-    (Δy · totalSupply) / reserveY
+(Δx · totalSupply) / reserveX,
+(Δy · totalSupply) / reserveY
 )
 ```
-The `min(...)` matters. If you deposit off-ratio, the excess on the bigger side gets no share credit — it effectively donates to existing LPs. Forces honest ratio matching.
+The `min(...)` forces honest ratio matching. Off-ratio excess donates to existing LPs.
 
 ### Swap output
-
-Without fee:
-```
-Δy = (y · Δx) / (x + Δx)
-```
 
 With 0.3% LP fee (V2 form, integer math):
 ```
 Δy = (y · Δx · 997) / (x · 1000 + Δx · 997)
 ```
-
-The 0.3% fee stays in the pool. It grows `k`, which is how LPs earn from trading volume — silently, into the reserves.
+The 0.3% fee stays in the pool. It grows `k`, silently increasing per-share value.
 
 ### Liquidity removal (proportional)
 ```
 amount0 = (shares · reserve0) / totalSupply
 amount1 = (shares · reserve1) / totalSupply
 ```
-Burn the user's LP shares, send them their proportional slice of each reserve. No price involved — just shares-to-reserves arithmetic.
+Burn shares, send proportional slice of each reserve.
 
 ### Slippage protection
 
-Every swap takes a `minAmountOut` parameter. The function checks:
-```
-require(Δy >= minAmountOut)
-```
-If the executed output is less than what the user demanded — e.g., because of MEV / front-running between signing and execution — the whole transaction reverts. User pays gas but keeps their input tokens.
+Every swap takes `minAmountOut`. Router asserts final output ≥ threshold after all hops. Intermediate hops don't check slippage — only the aggregate matters.
+
+---
+
+## Design decisions worth noting
+
+Choices made during implementation that diverge from a straight V2 clone:
+
+**Pool inherits ERC20 directly.** No separate LPToken contract. Simpler CREATE2 (smaller init code), lower gas (no external call for mint/burn), no state sync between two contracts.
+
+**Initialize pattern instead of constructor args.** Pool constructor takes zero args; Factory calls `initialize(token0, token1)` right after deployment. This keeps `type(pool).creationCode` stable across all pools, which is what lets Router compute pool addresses off-chain without knowing per-pool constructor args.
+
+**Balance-check (optimistic transfer) pattern.** Pool doesn't do `transferFrom` internally. Callers pre-push tokens to Pool's address, then invoke swap/addLiquidity. Pool verifies via `balanceOf(this) - recordedReserve >= claimedAmount`. Fewer external calls, matches V2's production design.
+
+**Router caches pool bytecode hash.** At Router deployment, `poolHash = keccak256(type(pool).creationCode)` gets stored as immutable. Every subsequent `getExpectedAddr()` call is pure math — no chain reads to find pools.
 
 ---
 
 ## Security considerations
 
-Attacks I'm thinking about and how I plan to handle each:
+Attacks defended against and how:
 
-| Attack | Defense |
-|---|---|
-| **Reentrancy** on swap and removeLiquidity | CEI pattern: checks → effects (state changes) → interactions (token transfers). All state updates happen before any external call. |
-| **First-LP inflation attack** | Plan: V2-style `MINIMUM_LIQUIDITY = 1000` permanently locked on first deposit. Final decision pending — see Open Questions. |
-| **Donation attacks** (raw token transfers to the pool) | V2 has `sync()` / `skim()` to reconcile. Likely deferred to a later phase. |
-| **Integer division precision** | Always multiply before dividing. `(a * b) / c` — never `(a / c) * b`. |
-| **Fee-on-transfer tokens** | Not supported in v1. Documented as a known limitation. |
-| **Slippage / sandwich attacks** | `minAmountOut` on every swap. |
+| Attack | Defense | Status |
+|---|---|---|
+| Reentrancy on all external functions | `ReentrancyGuard.nonReentrant` on Pool.addLiquidity / swap / removeLiquidity | ✅ Implemented |
+| First-LP inflation attack | `MINIMUM_LIQUIDITY = 1000` permanently minted to `address(1)` on first liquidity | ✅ Implemented |
+| Direct Pool exploitation (bypassing Router) | Balance-check pattern — Pool verifies token arrival via `balanceOf` | ✅ Implemented |
+| Integer division precision | Multiply before divide, throughout | ✅ Enforced |
+| Slippage / sandwich attacks | `minAmountOut` on swap; aggregated at Router level for multi-hop | ✅ Implemented |
+| Duplicate pool creation | Factory checks `poolRegistry` before deploying; blocks duplicates | ✅ Implemented |
+| Initialize front-running | `initialize` gated by `msg.sender == i_FactoryAddress` and one-shot `isInitialized` flag | ✅ Implemented |
+| Fee-on-transfer tokens | Not supported | ⚠️ Known limitation |
+| Donation attacks (raw transfers) | No `sync()`/`skim()`; donations become dust | ⚠️ Known limitation |
 
-I'll run Slither on each phase before deploying anything to mainnet.
+Static analysis: Slither runs clean on Pool + Factory (naming convention warnings only).
 
 ---
 
-## Open questions
+## Deployed contracts
 
-Things I haven't fully decided yet — open for revisiting as I build:
+### Current — Sepolia testnet (v1 live)
 
-- **MINIMUM_LIQUIDITY lock** — implement in v1 (2 extra lines, blocks a real attack class), or skip for now and document?
-- **Fee model** — hard-code 0.3%, or configurable per pool? Leaning fixed for v1.
-- **Token ordering** — sort by address (V2-style) in the Factory, or accept whatever order the deployer passes? Probably accept for v1, sort starting from v2.
-- **LP token naming** — per-pair like V2's `UNI-V2`, or a single generic symbol?
-- **TWAP oracle** — out of scope for v1. Worth considering for v2.
+| Contract | Address |
+|---|---|
+| Factory | `<add factory address>` |
+| Router | `<add router address>` |
+| Test Token A | `<add token A address>` |
+| Test Token B | `<add token B address>` |
+
+Pool contracts are deployed on demand by the Factory. Each pair gets its own Pool at a deterministic CREATE2 address — computable off-chain from the pair.
+
+All contracts verified on Sepolia Etherscan.
+
+### Planned — L2 mainnet (v1.1)
+
+Deploying to a low-gas EVM L2 next. Candidate chains: **Base**, **Polygon**, **Arbitrum** — final choice pending on ecosystem fit and testing depth. When live, [swap.adarshpandey.xyz](https://swap.adarshpandey.xyz) will re-point to the mainnet contracts; Sepolia stays available as a testing environment.
+
+---
+
+## Frontend
+
+Live at **[swap.adarshpandey.xyz](https://swap.adarshpandey.xyz)**.
+
+Stack:
+
+- **viem** for chain interaction (typed ABIs, no ethers.js)
+- **wagmi** for React hooks
+- **RainbowKit** for wallet connection
+- **Vite + React** for the app shell
+- Deployed on Netlify
+
+Three tabs: Swap, Add Liquidity, Remove Liquidity. Wallet connects directly to Sepolia. No backend, no relay layer — the browser talks straight to the contracts.
 
 ---
 
@@ -174,28 +229,18 @@ Things I haven't fully decided yet — open for revisiting as I build:
 # Build
 forge build
 
-# Test (once tests exist)
+# Test
 forge test
+
+# Coverage
+forge coverage
 
 # Static analysis
 slither .
 
-# Local fork
-anvil
+# Local fork of Sepolia
+anvil --fork-url $SEPOLIA_RPC_URL
 ```
-
----
-
-## Deployed contracts
-
-**Phase 0 — ERC-20 tokens (Sepolia)**
-
-| Asset | Address |
-|---|---|
-| Token A | [`0xf64c5955...50d6d1d`](https://sepolia.etherscan.io/address/0xf64c595579fde59a8a26c502bf492de9650d6d1d) |
-| Token B | [`0xa9d479f9...b35fb156`](https://sepolia.etherscan.io/address/0xa9d479f9685660b02a32b44c768aa6e1b35fb156) |
-
-Phase 1+ — coming soon.
 
 ---
 
